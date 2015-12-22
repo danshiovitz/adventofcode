@@ -1,0 +1,42 @@
+1: C
+2: C++
+3: bash
+4: sql
+5: go
+6: ruby
+7: lua
+8: java
+9: clojure
+10: javascript
+11: node.js
+12: jq
+13: scala
+14: erlang
+15: haskell
+
+Remaining:
+rust
+python2
+python3
+perl5
+perl6
+scheme
+haskell
+inform 6
+I7
+tads 2
+T3
+javascript
+node.js
+clojure
+ocaml
+C#
+pyth
+golfscript
+scala
+elixir
+pike
+
+kotlin, groovy, C#, scheme, rust, golfscript, pike, python, perl 6, perl 5
+
+swift?

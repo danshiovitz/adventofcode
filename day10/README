@@ -1,0 +1,2 @@
+This is the nashorn-specific javascript variant - run with 
+  jjs -J-Xmx1g prog.js # need a larger heap to do it 50 times
