@@ -1,0 +1,7 @@
+*.class
+*~
+*.bak
+*.hi
+*.hs
+*.o
+a.out
