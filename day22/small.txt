@@ -1,0 +1,3 @@
+Hit Points: 21
+Damage: 9
+Hero HP: 20
