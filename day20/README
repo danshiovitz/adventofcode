@@ -1,0 +1,4 @@
+These golfscript programs do technically work but in practice I suspect
+they're too slow to solve the problems in a reasonable amount of time. I
+wrote the ruby scripts as reference solutions to aid in validating the
+golfscript ones.
