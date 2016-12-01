@@ -80,7 +80,7 @@ end
 function run(file, wires)
   defs = {}
   for line in io.lines(file) do
-    if string.len(line) > 0 then
+    if line:len() > 0 then
       i, j = line:find("(%s*)%->(%s*)")
       func = parse(line:sub(1, i):gsub("(%s*)$", ""))
       dest = line:sub(j):gsub("^(%s*)", "")

@@ -1,0 +1,9 @@
+swift
+pyth
+elixir
+ocaml
+nim
+ceylon
+c++11/14
+idris
+icon
