@@ -7,7 +7,6 @@ WALL = "#"
 STEPPED = "O"
 
 def parse(lines):
-  instructions = []
   for line in lines:
     args = []
     if matches(line, args, r'([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+)'):
