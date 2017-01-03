@@ -2,16 +2,16 @@
 import sys
 import re
 
+# for pt 2, you can manually analyze the program to see it computes a! plus
+# some constant and compute that directly
 def parse(lines):
   instructions = []
   for line in lines:
     args = []
-    if matches(line, args, r'cpy (-?[0-9]+|[a-z]) ([a-z])'):
-      instructions.append(('cpy', *args))
-    elif matches(line, args, r'(inc|dec) ([a-z])'):
+    if matches(line, args, r'(jnz|cpy) (-?[0-9]+|[a-z]) (-?[0-9]+|[a-z])'):
       instructions.append(tuple(args))
-    elif matches(line, args, r'jnz (-?[0-9]+|[a-z]) (-?[0-9]+|[a-z])'):
-      instructions.append(('jnz', *args))
+    elif matches(line, args, r'(inc|dec|tgl) ([a-z])'):
+      instructions.append(tuple(args))
     else:
       print("Bad line: {}".format(line))
   return instructions
@@ -45,33 +45,52 @@ def exec_instructions(instructions, init_vals):
     if arg.isalpha():
       state[arg] = value
     else:
-      print("Can't write {}".format(arg))
-
+      print("Can't write {}, skipping".format(arg))
+  def toggle_inst(pc):
+    if pc < 0 or pc >= len(instructions):
+      print("Toggle out of range, skipping")
+    else:
+      if instructions[pc][0] == "inc":
+        toggled_inst = "dec"
+      elif len(instructions[pc][1:]) == 1:
+        toggled_inst = "inc"
+      elif instructions[pc][0] == "jnz":
+        toggled_inst = "cpy"
+      elif len(instructions[pc][1:]) == 2:
+        toggled_inst = "jnz"
+      else:
+        print("Bad instruction: {}".format(instructions[pc]))
+      instructions[pc] = tuple([toggled_inst, *instructions[pc][1:]])
+      
   while state["pc"] < len(instructions):
     if state["pc"] < 0:
       print("Segmentation fault. Core dumped. -more-")
       return
     func_name, *args = instructions[state["pc"]]
-    globals()[func_name + "_func"](*args, read_arg, write_arg)
+    globals()[func_name + "_func"](*args, read_arg, write_arg, toggle_inst)
   print("Final state: {}".format(state))
 
-def cpy_func(arg1, arg2, read_arg, write_arg):
+def cpy_func(arg1, arg2, read_arg, write_arg, toggle_inst):
   write_arg(arg2, read_arg(arg1))
   write_arg("pc", read_arg("pc") + 1)
 
-def inc_func(arg1, read_arg, write_arg):
+def inc_func(arg1, read_arg, write_arg, toggle_inst):
   write_arg(arg1, read_arg(arg1) + 1)
   write_arg("pc", read_arg("pc") + 1)
 
-def dec_func(arg1, read_arg, write_arg):
+def dec_func(arg1, read_arg, write_arg, toggle_inst):
   write_arg(arg1, read_arg(arg1) - 1)
   write_arg("pc", read_arg("pc") + 1)
 
-def jnz_func(arg1, arg2, read_arg, write_arg):
+def jnz_func(arg1, arg2, read_arg, write_arg, toggle_inst):
   if read_arg(arg1) == 0:
     write_arg("pc", read_arg("pc") + 1)
   else:
     write_arg("pc", read_arg("pc") + read_arg(arg2))
+
+def tgl_func(arg1, read_arg, write_arg, toggle_inst):
+  toggle_inst(read_arg("pc") + read_arg(arg1))
+  write_arg("pc", read_arg("pc") + 1)
 
 def run(input_file, init_vals_str):
   with open(input_file) as f:
