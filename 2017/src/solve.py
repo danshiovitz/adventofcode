@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import argparse
+from collections import defaultdict
 from itertools import count, permutations
+import operator
 from pathlib import Path
 import re
 import sys
@@ -199,6 +201,46 @@ def run_day07(input):
     assign_total_weights(root, nodes)
     bad_name, fixed_weight = find_unbalanced_node(root, None, nodes)
     return (root, fixed_weight)
+
+def run_day08(input):
+    def parse_cond_op(txt):
+        if txt == '<': return operator.lt
+        if txt == '<=': return operator.le
+        if txt == '==': return operator.eq
+        if txt == '!=': return operator.ne
+        if txt == '>=': return operator.ge
+        if txt == '>': return operator.gt
+        raise Exception(f"Unknown operator: {txt}")
+
+    def parse(line):
+        # c inc -20 if c == 10
+        m = re.match(r'^(\w+)\s+(inc|dec)\s+(-?\d+)\s+if\s+(\w+)\s*(\S+)\s*(-?[0-9]+)$', line)
+        if not m:
+            raise Exception(f"Can't parse: {line}")
+        act_reg = m.group(1)
+        act_op = operator.add if m.group(2) == 'inc' else operator.sub
+        amount = int(m.group(3))
+        cond_reg = m.group(4)
+        cond_op = parse_cond_op(m.group(5))
+        cond_test = int(m.group(6))
+
+        def evaluate(registers):
+            val = registers[cond_reg]
+            if not cond_op(val, cond_test):
+                return
+            registers[act_reg] = act_op(registers[act_reg], amount)
+        return evaluate
+
+    def run_instructions(instructions):
+        registers = defaultdict(int)
+        curmax = 0
+        for inst in instructions:
+            inst(registers)
+            curmax = max(list(registers.values()) + [curmax])
+        return max(registers.values()), curmax
+
+    instructions = [parse(line) for line in input]
+    return run_instructions(instructions)
 
 def solve(day, input, answers):
     func = globals()[f"run_{day}"]
