@@ -242,6 +242,62 @@ def run_day08(input):
     instructions = [parse(line) for line in input]
     return run_instructions(instructions)
 
+def run_day09(input):
+    def parse_garbage(line, idx):
+        if line[idx] != '<':
+            raise Exception(f"Garbage doesn't start with < at {idx}")
+        idx += 1
+        garbage = {'type': 'garbage', 'start_index': idx, 'text': ""}
+        while line[idx] != '>':
+            if line[idx] == '!':
+                idx += 2
+            else:
+                garbage['text'] += line[idx]
+                idx += 1
+            garbage['end_index'] = idx
+        return garbage, idx+1
+
+    def parse_group(line, idx=0):
+        if line[idx] != '{':
+            raise Exception(f"Group doesn't start with {{ at {idx}")
+        idx += 1
+        group = {'type': 'group', 'start_index': idx, 'children': []}
+        while line[idx] != '}':
+            if line[idx] == '<':
+                garbage, new_idx = parse_garbage(line, idx)
+                group['children'].append(garbage)
+                idx = new_idx
+            elif line[idx] == '{':
+                child, new_idx = parse_group(line, idx)
+                group['children'].append(child)
+                idx = new_idx
+                if line[idx] == ',':
+                    idx += 1
+                elif line[idx] not in '}{<':
+                    raise Exception(f"Unexpected: {line[idx]}")
+            else:
+                idx += 1
+        group['end_index'] = idx
+        idx += 1
+        return group, idx
+
+    def score_group(group, depth=1):
+        return depth + sum(
+            score_group(c, depth+1) for c in group['children']
+            if c['type'] == 'group')
+
+    def count_garbage(group):
+        return sum(len(g['text']) if g['type'] == 'garbage' else count_garbage(g)
+                   for g in group['children'])
+
+    root, end_idx = parse_group(input[0])
+    if end_idx != len(input[0]):
+        raise Exception(f"Group ended early at {end_idx} instead of {len(input[0])}")
+    return [
+        score_group(root),
+        count_garbage(root),
+    ]
+
 def solve(day, input, answers):
     func = globals()[f"run_{day}"]
     print(f"Solving {day} ...")
