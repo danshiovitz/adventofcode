@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 import argparse
 from collections import defaultdict
+from functools import reduce
 from itertools import count, permutations
 import operator
 from pathlib import Path
 import re
-import sys
 
 def run_day01(input):
     digits = input[0]
     def ck(i, offset):
         return digits[i] == digits[(i + offset + len(digits)) % len(digits)]
     return [str(sum(int(digits[i]) for i in range(len(digits)) if ck(i, o)))
-                    for o in (1, len(digits) // 2)]
+            for o in (1, len(digits) // 2)]
 
 def run_day02(input):
     def split_digits(line):
@@ -296,6 +296,52 @@ def run_day09(input):
     return [
         score_group(root),
         count_garbage(root),
+    ]
+
+def run_day10(input):
+    def circular_reverse(lst, start_pos, size):
+        end_pos = start_pos + size
+        if end_pos <= len(lst):
+            return lst[0:start_pos] + lst[start_pos:end_pos][::-1] + lst[end_pos:]
+        else:
+            end_pos %= len(lst)
+            tmp = (lst[start_pos:] + lst[:end_pos])[::-1]
+            return tmp[-end_pos:] + lst[end_pos:start_pos] + tmp[:-end_pos]
+
+    def twist(vals, lengths, times=1):
+        vals = vals[:]
+        cur_pos = 0
+        skip = 0
+        for _ in range(times):
+            for ln in lengths:
+                vals = circular_reverse(vals, cur_pos, ln)
+                cur_pos = (cur_pos + ln + skip) % len(vals)
+                skip += 1
+        return vals
+
+    def as_values(line):
+        return [int(a) for a in re.split(r'\s*,\s*', input[1])]
+
+    def as_chars(line):
+        return [int(c) for c in line.encode("ascii")] + [17, 31, 73, 47, 23]
+
+    def chunk(lst, size):
+        if not lst:
+            return []
+        return [lst[i:i + size] for i in range(0, len(lst), size)]
+
+    def dense_hash(values):
+        return reduce(operator.xor, values)
+
+    vals = list(range(int(input[0])))
+
+    values_twisted = twist(vals, as_values(input[1]))
+    chars_twisted = twist(vals, as_chars(input[1]), times=64)
+    dense_hashes = [dense_hash(c) for c in chunk(chars_twisted, 16)]
+
+    return [
+        values_twisted[0] * values_twisted[1],
+        bytearray(dense_hashes).hex(),
     ]
 
 def solve(day, input, answers):
