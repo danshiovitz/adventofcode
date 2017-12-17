@@ -401,6 +401,44 @@ def run_day11(input):
         max(step_counts),
     ]
 
+def run_day12(input):
+    def parse(line, data):
+        m = re.match(r'([0-9]+)\s*<->\s*([0-9]+(?:\s*,\s*[0-9]+)*)', line)
+        if not m:
+            raise Exception(f"Bad line: {line}")
+        pipe = m.group(1)
+        connects = re.split(r'\s*,\s*', m.group(2))
+        data[pipe] = set(connects)
+
+    def all_reachable(pipe, data):
+        working = [pipe]
+        seen = set()
+        while working:
+            p = working.pop(0)
+            if p in seen:
+                continue
+            else:
+                seen.add(p)
+                working.extend(data[p])
+        return seen
+
+    def groups(data):
+        pipes = set(data.keys())
+        groups = []
+        while pipes:
+            p = pipes.pop()
+            group = all_reachable(p, data)
+            groups.append(group)
+            pipes -= group
+        return groups
+
+    data = {}
+    [parse(line, data) for line in input]
+    return [
+        len(all_reachable('0', data)),
+        len(groups(data)),
+    ]
+    
 def solve(day, input, answers):
     func = globals()[f"run_{day}"]
     print(f"Solving {day} ...")
