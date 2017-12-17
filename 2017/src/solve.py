@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse
-from collections import defaultdict
+from collections import Counter, defaultdict
 from functools import reduce
 from itertools import count, permutations
 import operator
@@ -342,6 +342,63 @@ def run_day10(input):
     return [
         values_twisted[0] * values_twisted[1],
         bytearray(dense_hashes).hex(),
+    ]
+
+def run_day11(input):
+    def flip(d, ns, ew):
+        ret = ''
+        if ns:
+            ret += 'n' if d[0] == 's' else 's'
+        else:
+            ret += d[0]
+        if ew and len(d) > 1:
+            ret += 'e' if d[1] == 'w' else 'w'
+        else:
+            ret += d[1] if len(d) > 1 else ''
+        return ret
+
+    def move(dir1, dir2, cur):
+        cur[dir1] -= 1
+        f2 = flip(dir2, True, True)
+        if cur[f2] > 0:
+            cur[f2] -= 1
+        else:
+            cur[dir2] += 1
+
+    def add_step(cur, step):
+        def t(d):
+            return flip(d, ns=step[0] == 's', ew=step[-1] == 'w')
+        if step in ('n', 's'):
+            if cur[t('s')] > 0:
+                cur[t('s')] -= 1
+            elif cur[t('se')] > 0:
+                move(t('se'), t('ne'), cur)
+            elif cur[t('sw')] > 0:
+                move(t('sw'), t('nw'), cur)
+            else:
+                cur[t('n')] += 1
+        elif step in ('ne', 'se', 'nw', 'sw'):
+            if cur[t('sw')] > 0:
+                cur[t('sw')] -= 1
+            elif cur[t('nw')] > 0:
+                move(t('nw'), t('n'), cur)
+            elif cur[t('s')] > 0:
+                move(t('s'), t('se'), cur)
+            else:
+                cur[t('ne')] += 1
+        else:
+            print(f"Unknown step: {step}")
+        return cur
+
+    def steps(counts):
+        return sum(abs(v) for v in counts.values())
+
+    moves = re.split(r'\s*,\s*', input[0])
+    cur = Counter()
+    step_counts = [steps(add_step(cur, m)) for m in moves]
+    return [
+        step_counts[-1],
+        max(step_counts),
     ]
 
 def solve(day, input, answers):
