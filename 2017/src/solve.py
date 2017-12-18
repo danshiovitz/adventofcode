@@ -438,7 +438,64 @@ def run_day12(input):
         len(all_reachable('0', data)),
         len(groups(data)),
     ]
-    
+
+def run_day13(input):
+    def parse(line):
+        m = re.match(r'([0-9]+):\s*([0-9]+)', line)
+        if not m:
+            raise Exception(f"Bad line: {line}")
+        return (int(m.group(1)), int(m.group(2)))
+
+    def full_range(range):
+        return (range * 2) - 2
+
+    def severity(depth, range, delay):
+        t = depth + delay
+        return depth * range if t % full_range(range) == 0 else 0
+
+    # https://stackoverflow.com/a/22808285
+    def prime_factors(n):
+        i = 2
+        factors = []
+        while i * i <= n:
+            if n % i:
+                i += 1
+            else:
+                n //= i
+                factors.append(i)
+        if n > 1:
+            factors.append(n)
+        return factors
+
+    def combined_prime_factors(ns):
+        cur = Counter()
+        for n in ns:
+            f = Counter(prime_factors(n))
+            combined_keys = set(cur.keys()) | set(f.keys())
+            cur = Counter(dict((k, max(cur[k], f[k])) for k in combined_keys))
+        return cur.elements()
+
+    def inc_remainders(offsets):
+        return {k: 0 if v+1 == k else v+1 for k, v in offsets.items()}
+
+    def min_delay(layers):
+        blocked = defaultdict(set)
+        for d, r in layers.items():
+            as_full = full_range(r)
+            blocked[as_full].add(-d % as_full)
+        cur_offsets = {f: 0 for f in blocked.keys()}
+        for i in count():
+            failed = next((f for f, o in cur_offsets.items() if o in blocked[f]), None)
+            if failed is None:
+                return i
+            cur_offsets = inc_remainders(cur_offsets)
+
+    layers = dict(parse(line) for line in input)
+    return [
+        sum(severity(d, r, 0) for d, r in layers.items()),
+        min_delay(layers),
+    ]
+
 def solve(day, input, answers):
     func = globals()[f"run_{day}"]
     print(f"Solving {day} ...")
@@ -458,7 +515,7 @@ def load_file(fname):
     if not fpath.exists():
         return []
     with open(fpath) as f:
-        return [line.strip() for line in f.readlines()]
+        return [line.strip() for line in f.readlines() if not line[0] == '#']
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Solve advent of code problems')
