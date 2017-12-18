@@ -6,6 +6,7 @@ from itertools import count, permutations
 import operator
 from pathlib import Path
 import re
+import string
 
 def run_day01(input):
     digits = input[0]
@@ -298,7 +299,7 @@ def run_day09(input):
         count_garbage(root),
     ]
 
-def run_day10(input):
+def sparse_knot_hash(input_lengths, vals_size=256, num_twists=64):
     def circular_reverse(lst, start_pos, size):
         end_pos = start_pos + size
         if end_pos <= len(lst):
@@ -319,12 +320,13 @@ def run_day10(input):
                 skip += 1
         return vals
 
-    def as_values(line):
-        return [int(a) for a in re.split(r'\s*,\s*', input[1])]
+    vals = list(range(int(vals_size)))
+    return twist(vals, input_lengths, times=num_twists)
 
-    def as_chars(line):
-        return [int(c) for c in line.encode("ascii")] + [17, 31, 73, 47, 23]
+def as_knot_hash_chars(line):
+    return [int(c) for c in line.encode("ascii")] + [17, 31, 73, 47, 23]
 
+def knot_hash(input_lengths, vals_size=256, num_twists=64):
     def chunk(lst, size):
         if not lst:
             return []
@@ -333,15 +335,21 @@ def run_day10(input):
     def dense_hash(values):
         return reduce(operator.xor, values)
 
-    vals = list(range(int(input[0])))
+    sparse_hash = sparse_knot_hash(input_lengths, vals_size, num_twists)
+    dense_hashes = [dense_hash(c) for c in chunk(sparse_hash, 16)]
+    return bytearray(dense_hashes)
 
-    values_twisted = twist(vals, as_values(input[1]))
-    chars_twisted = twist(vals, as_chars(input[1]), times=64)
-    dense_hashes = [dense_hash(c) for c in chunk(chars_twisted, 16)]
+def run_day10(input):
+    def as_values(line):
+        return [int(a) for a in re.split(r'\s*,\s*', input[1])]
+
+    vals_size = int(input[0])
+    sparse = sparse_knot_hash(as_values(input[1]), vals_size=vals_size, num_twists=1)
+    normal = knot_hash(as_knot_hash_chars(input[1]))
 
     return [
-        values_twisted[0] * values_twisted[1],
-        bytearray(dense_hashes).hex(),
+        sparse[0] * sparse[1],
+        normal.hex(),
     ]
 
 def run_day11(input):
@@ -494,6 +502,76 @@ def run_day13(input):
     return [
         sum(severity(d, r, 0) for d, r in layers.items()),
         min_delay(layers),
+    ]
+
+def run_day14(input):
+    def row_hashes(keystring, num_rows):
+        lengths_list = [keystring + "-" + str(i) for i in range(num_rows)]
+        return [knot_hash(as_knot_hash_chars(lns)) for lns in lengths_list]
+
+    def num_1bits(val):
+        return bin(val).count("1")
+
+    def to_grid(hashes):
+        return [reduce(operator.add, [format(v, '08b') for v in row], "")
+                for row in hashes]
+
+    def color(grid):
+        width = len(grid[0])
+        height = len(grid)
+        colors = defaultdict(set)
+        above_colors = [None for _ in range(width)]
+        next_color = 1
+        for y in range(height):
+            left_color = None
+            for x in range(width):
+                if grid[y][x] != '1':
+                    if grid[y][x] != '0':
+                        raise Exception(f"Unknown entry: {grid[y][x]}")
+                    left_color = None
+                    above_colors[x] = None
+                    continue
+                if left_color is None and above_colors[x] is None:
+                    # if neither neighbor is colored, it gets a new color
+                    use_color = next_color
+                    next_color += 1
+                elif left_color is None or left_color == above_colors[x]:
+                    use_color = above_colors[x]
+                elif above_colors[x] is None:
+                    use_color = left_color
+                else:
+                    # if both left and above are present and different,
+                    # then we recolor the left group
+                    use_color = above_colors[x]
+                    colors[use_color] |= colors[left_color]
+                    del colors[left_color]
+                    above_colors = [use_color if a == left_color else a
+                                    for a in above_colors]
+                colors[use_color].add((x, y))
+                left_color = above_colors[x] = use_color
+
+        return colors
+
+    def with_colors(grid, colors):
+        squares = {xy: c for c, xys in colors.items() for xy in xys}
+        width = len(grid[0])
+        height = len(grid)
+        colors = "." + string.digits + string.ascii_letters
+
+        def ch(x, y):
+            group = squares.get((x, y), 0)
+            return colors[group % len(colors)]
+
+        return ["".join(ch(x, y) for x in range(width)) for y in range(height)]
+
+    all_hashes = row_hashes(input[0], 128)
+    used_squares = sum(sum(num_1bits(v) for v in h) for h in all_hashes)
+    g = to_grid(all_hashes)
+    colors = color(g)
+
+    return [
+        used_squares,
+        len(colors),
     ]
 
 def solve(day, input, answers):
