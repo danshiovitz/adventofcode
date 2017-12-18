@@ -7,6 +7,7 @@ import operator
 from pathlib import Path
 import re
 import string
+import subprocess
 
 def run_day01(input):
     digits = input[0]
@@ -572,6 +573,29 @@ def run_day14(input):
     return [
         used_squares,
         len(colors),
+    ]
+
+def run_day15(input):
+    def parse(line):
+        m = re.match(r'Generator ([A-Z]+) starts with ([0-9]+)', line)
+        if not m:
+            raise Exception(f"Bad line: {line}")
+        return (m.group(1), int(m.group(2)))
+
+    def run_cpp_helper(day, *args):
+        res = subprocess.run(["src/helper", day, *[str(a) for a in args]],
+                             stdout=subprocess.PIPE)
+        output = res.stdout.decode("utf-8")
+        if not output.startswith("Matches: "):
+            raise Exception(f"Bad/unexpected output: {output}")
+        return output[9:].strip()
+
+    gens = dict(parse(line) for line in input)
+    pt1 = run_cpp_helper('day15', "0", gens['A'], gens['B'])
+    pt2 = run_cpp_helper('day15', "1", gens['A'], gens['B'])
+    return [
+        pt1,
+        pt2,
     ]
 
 def solve(day, input, answers):
