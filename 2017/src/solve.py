@@ -598,6 +598,62 @@ def run_day15(input):
         pt2,
     ]
 
+def run_day16(input):
+    def parse(line):
+        for piece in re.split(r'\s*,\s*', line):
+            yield piece
+
+    def act(move, state):
+        def swap(p1, p2, s):
+            d = s[:]
+            d[p1] = s[p2]
+            d[p2] = s[p1]
+            return d
+
+        m = re.match(r'^s([0-9]+)$', move)
+        if m:
+            sz = int(m.group(1))
+            return state[-sz:] + state[:-sz]
+        m = re.match(r'^x([0-9]+)/([0-9]+)$', move)
+        if m:
+            p1, p2 = int(m.group(1)), int(m.group(2))
+            return swap(p1, p2, state)
+        m = re.match(r'^p([a-z]+)/([a-z]+)$', move)
+        if m:
+            p1, p2 = state.index(m.group(1)), state.index(m.group(2))
+            return swap(p1, p2, state)
+        raise Exception(f"Unknown move {move}")
+
+    def dance(moves, init_state, times):
+        init_state = list(init_state)
+
+        state = init_state[:]
+        loop_size = times + 1
+        for t in range(times):
+            for move in moves:
+                state = act(move, state)
+            if state == init_state:
+                loop_size = t + 1
+                print(f"Found loop of size {loop_size}")
+                break
+
+        state = init_state[:]
+        for _ in range(times % loop_size):
+            for move in moves:
+                state = act(move, state)
+
+        return "".join(state)
+
+    init_state = list(string.ascii_lowercase[:int(input[0])])
+    moves = list(parse(input[1]))
+    dance_once = dance(moves, init_state, times=1)
+    dance_1b = dance(moves, init_state, times=100)
+
+    return [
+        dance_once,
+        dance_1b,
+    ]
+
 def solve(day, input, answers):
     func = globals()[f"run_{day}"]
     print(f"Solving {day} ...")
