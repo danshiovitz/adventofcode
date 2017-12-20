@@ -654,6 +654,37 @@ def run_day16(input):
         dance_1b,
     ]
 
+def run_day17(input):
+    def inserts(stepsize, times=2017):
+        buf = [0]
+        p = 0
+        for t in range(1, times+1):
+            p = (p + stepsize) % len(buf)
+            buf.insert(p+1, t)
+            p = (p + 1) % len(buf)
+        np = (buf.index(times) + 1) % len(buf)
+        return buf[np]
+
+    def watch_idx(idx, stepsize, times=2017):
+        buflen = 1
+        p = 0
+        cur = None
+        for t in range(1, times+1):
+            p = (p + stepsize) % buflen
+            buflen += 1
+            p = (p + 1) % buflen
+            if p == idx:
+                cur = t
+        return cur
+
+    stepsize = int(input[0])
+    next_val = inserts(stepsize, times=2017)
+    second_idx = watch_idx(1, int(input[0]), 50000000)
+    return [
+        next_val,
+        second_idx,
+    ]
+
 def solve(day, input, answers):
     func = globals()[f"run_{day}"]
     print(f"Solving {day} ...")
