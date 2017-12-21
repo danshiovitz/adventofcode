@@ -2,7 +2,7 @@
 import argparse
 from collections import Counter, defaultdict
 from functools import reduce
-from itertools import count, permutations
+from itertools import combinations, count, groupby, permutations
 import operator
 from pathlib import Path
 import re
@@ -832,6 +832,75 @@ def run_day19(input):
     return [
         letters,
         steps,
+    ]
+
+def run_day20(input):
+    def particle(idx, line):
+        xyz = r'<(-?\d+),(-?\d+),(-?\d+)>'
+        m = re.match(r'p=' + xyz + r', v=' + xyz + r', a=' + xyz, line)
+        if not m:
+            print(f"Bad line: {line}")
+        vals = [int(v) for v in m.groups()]
+        return {"id": idx, "p": tuple(vals[0:3]), "last_p": None,
+                "v": tuple(vals[3:6]), "a": tuple(vals[6:9])}
+
+    def mdist(xyz):
+        return sum(abs(v) for v in xyz)
+
+    def tick(particle):
+        px, py, pz = particle["p"]
+        vx, vy, vz = particle["v"]
+        ax, ay, az = particle["a"]
+        vx += ax
+        vy += ay
+        vz += az
+        px += vx
+        py += vy
+        pz += vz
+        return {"id": particle["id"], "p": (px, py, pz), "last_p": particle["p"],
+                "v": (vx, vy, vz), "a": particle["a"]}
+
+    def stabilized(particle):
+        sign = lambda d: 0 if d == 0 else (1 if d > 0 else -1)
+        return all(a == 0 or sign(v) == sign(a)
+                   for v, a in zip(particle["v"], particle["a"]))
+
+    def sq_distance(p1, p2):
+        x1, y1, z1 = p1
+        x2, y2, z2 = p2
+        return (x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2
+
+    def may_collide(p1, p2, cache):
+        ckey = tuple(sorted([p1["id"], p2["id"]]))
+        if ckey in cache:
+            return False
+        if not stabilized(p1) or not stabilized(p2):
+            return True
+        # Treat getting closer as a possible collision:
+        if sq_distance(p1["last_p"], p2["last_p"]) >= sq_distance(p1["p"], p2["p"]):
+            return True
+        cache.add(ckey)
+        return False
+
+    def run_collisions(particles):
+        miss_cache = set()
+        while particles:
+            pkey = lambda p: p["p"]
+            particles = sorted([tick(p) for p in particles], key=pkey)
+            ps = {k: list(v) for k, v in groupby(particles, key=pkey)}
+            collided = {k for k, v in ps.items() if len(v) > 1}
+            particles = [p for p in particles if p["p"] not in collided]
+            if not any(may_collide(*c, miss_cache)
+                       for c in combinations(particles, 2)):
+                break
+        return particles
+
+    particles = [particle(idx, line) for idx, line in enumerate(input)]
+    min_a = min(particles, key=lambda p: tuple(mdist(p[k]) for k in "avp"))
+    post_collision = run_collisions(particles)
+    return [
+        min_a["id"],
+        len(post_collision),
     ]
 
 def solve(day, input, answers):
