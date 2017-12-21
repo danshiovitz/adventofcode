@@ -782,6 +782,58 @@ def run_day18(input):
         sends,
     ]
 
+def run_day19(input):
+    UP, DOWN, LEFT, RIGHT = (0, -1), (0, 1), (-1, 0), (1, 0)
+    def start_state(grid):
+        x = grid[0].index('|')
+        y = -1  # start out just outside the grid and move in
+        return ((x, y), DOWN, [], False)
+
+    def turn(coord, old_dir, grid):
+        x, y = coord
+        if old_dir != DOWN and y > 0 and grid[y-1][x] != ' ':
+            return UP
+        elif old_dir != UP and y < len(grid) - 1 and grid[y+1][x] != ' ':
+            return DOWN
+        elif old_dir != RIGHT and x > 0 and grid[y][x-1] != ' ':
+            return LEFT
+        elif old_dir != LEFT and x < len(grid[0]) - 1 and grid[y][x+1] != ' ':
+            return RIGHT
+        else:
+            raise Exception(f"Can't figure out turn at {coord} {old_dir}")
+
+    def move(state, grid):
+        coord, dir, letters, stopped = state
+        x = coord[0] + dir[0]
+        y = coord[1] + dir[1]
+        if x < 0 or x >= len(grid[0]) or y < 0 or y >= len(grid):
+            raise Exception(f"Ran off grid from {state}")
+        if grid[y][x] == '+':
+            dir = turn((x, y), dir, grid)
+        elif grid[y][x] in string.ascii_letters:
+            letters = letters + [grid[y][x]]
+        elif grid[y][x] in ('|', '-'):
+            pass
+        else:
+            stopped = True
+        return ((x, y), dir, letters, stopped)
+
+    def mazerun(grid):
+        state = start_state(grid)
+        steps = -1
+        while not state[-1]:
+            state = move(state, grid)
+            steps += 1
+        coord, dir, letters, stopped = state
+        print(f"Ended at {coord}")
+        return ''.join(letters), steps
+
+    letters, steps = mazerun(input)
+    return [
+        letters,
+        steps,
+    ]
+
 def solve(day, input, answers):
     func = globals()[f"run_{day}"]
     print(f"Solving {day} ...")
@@ -796,12 +848,13 @@ def solve(day, input, answers):
         else:
             print("")
 
-def load_file(fname):
+def load_file(fname, trim=False):
     fpath = Path(fname)
     if not fpath.exists():
         return []
     with open(fpath) as f:
-        return [line.strip() for line in f.readlines() if not line[0] == '#']
+        return [line.strip() if trim else line for line in f.readlines()
+                if not line[0] == '#']
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Solve advent of code problems')
@@ -812,8 +865,8 @@ def parse_args():
 
     if len(args.days) == 1:
         day = args.days[0]
-        inp = [args.input] if args.input else load_file(f"inputs/{day}")
-        ans = [args.answer] if args.answer else load_file(f"answers/{day}")
+        inp = [args.input] if args.input else load_file(f"inputs/{day}", trim=False)
+        ans = [args.answer] if args.answer else load_file(f"answers/{day}", trim=True)
         return [(args.days[0], inp, ans)]
     else:
         raise Exception("Can only handle one day right now")
