@@ -685,6 +685,103 @@ def run_day17(input):
         second_idx,
     ]
 
+def run_day18(input):
+    def parse(line):
+        m = re.match(r'([a-z]+)((?:\s+(?:[a-z]+|-?[0-9]+))*)', line)
+        if not m:
+            raise Exception(f"Can't parse: {line}")
+        action = m.group(1)
+        args = re.split(r'\s+', m.group(2).strip())
+        return (action, args)
+
+    def run_single(instruction, registers, top, queues=None):
+        def val(a):
+            try:
+                return int(a)
+            except ValueError:
+                return registers[a]
+
+        action, args = instruction
+        jumped = False
+        if action == "snd":
+            if queues:
+                other_id = 0 if registers["id"] == 1 else 1
+                queues[other_id].append(val(args[0]))
+                registers["ret"] += 1
+            else:
+                registers["sound"] = val(args[0])
+        elif action == "rcv":
+            if queues:
+                if queues[registers["id"]]:
+                    del registers["blocked"]
+                    registers[args[0]] = queues[registers["id"]].pop(0)
+                else:
+                    registers["blocked"] = True
+                    # Exit early, don't change the pc
+                    return
+            else:
+                if val(args[0]) != 0:
+                    registers["terminated"] = True
+                    registers["ret"] = registers["sound"]
+        elif action == "set":
+            registers[args[0]] = val(args[1])
+        elif action == "add":
+            registers[args[0]] += val(args[1])
+        elif action == "mul":
+            registers[args[0]] *= val(args[1])
+        elif action == "mod":
+            registers[args[0]] %= val(args[1])
+        elif action == "jgz":
+            if val(args[0]) > 0:
+                registers["pc"] += val(args[1])
+                jumped = True
+        else:
+            raise Exception(f"Unknown action {action}")
+        if not jumped:
+            registers["pc"] += 1
+        if registers["pc"] < 0 or registers["pc"] >= top:
+            registers["terminated"] = True
+
+    def run_instructions(insts):
+        registers = defaultdict(int)
+        top = len(instructions)
+        while True:
+            run_single(instructions[registers["pc"]], registers, top)
+            if registers["terminated"]:
+                return registers["ret"]
+
+    def run_instructions_multi(insts, procs):
+        all_registers = [defaultdict(int, {"id": p, "p": p}) for p in range(procs)]
+        queues = {r["id"]: [] for r in all_registers}
+        top = len(instructions)
+
+        def is_blocked(r):
+            return r["blocked"] and len(queues[r["id"]]) == 0
+        def is_terminated(r):
+            return r["terminated"]
+        def should_switch(r):
+            return is_blocked(r) or is_terminated(r)
+
+        while True:
+            if all(should_switch(r) for r in all_registers):
+                print("Deadlock detected!")
+                for r in all_registers:
+                    r["terminated"] = True
+            if all(is_terminated(r) for r in all_registers):
+                return all_registers[1]["ret"]
+            for r in all_registers:
+                while not should_switch(r):
+                    inst = instructions[r["pc"]]
+                    run_single(inst, r, top, queues)
+
+    instructions = [parse(line) for line in input]
+    recovered = run_instructions(instructions)
+    sends = run_instructions_multi(instructions, 2)
+    return [
+        recovered,
+        sends,
+    ]
+
 def solve(day, input, answers):
     func = globals()[f"run_{day}"]
     print(f"Solving {day} ...")
