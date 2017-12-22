@@ -988,6 +988,58 @@ def run_day21(input):
         cnt_18,
     ]
 
+def run_day22(input):
+    NORTH, SOUTH, EAST, WEST = (0, 1), (0, -1), (1, 0), (-1, 0)
+    dirs = [NORTH, EAST, SOUTH, WEST]
+    CLEAN, WEAKENED, INFECTED, FLAGGED = 'C', 'W', 'I', 'F'
+    conditions = [CLEAN, WEAKENED, INFECTED, FLAGGED]
+
+    def start_state(grid):
+        height = len(grid)
+        width = len(grid[0])
+        cur_infected = {
+            (x - width // 2, height // 2 - y): INFECTED
+            for y in range(width)
+            for x in range(height)
+            if grid[y][x] == '#'}
+        return ((0, 0), NORTH, cur_infected, 0)
+
+    def burst(state, complex):
+        coord, dir, cur_infected, infected_count = state
+        cur_cond = cur_infected.get(coord, CLEAN)
+        if cur_cond == CLEAN:
+            mod = -1
+        elif cur_cond == WEAKENED:
+            mod = 0
+        elif cur_cond == INFECTED:
+            mod = 1
+        elif cur_cond == FLAGGED:
+            mod = 2
+        dir = dirs[(dirs.index(dir) + len(dirs) + mod) % len(dirs)]
+        cmod = 1 if complex else 2
+        next_cond = conditions[
+            (conditions.index(cur_cond) + cmod) % len(conditions)]
+        if next_cond == CLEAN:
+            del cur_infected[coord]
+        else:
+            cur_infected[coord] = next_cond
+            if next_cond == INFECTED:
+                infected_count += 1
+        coord = (coord[0] + dir[0], coord[1] + dir[1])
+        return coord, dir, cur_infected, infected_count
+
+    def count_infections(state, bursts, complex):
+        for _ in range(bursts):
+            state = burst(state, complex=complex)
+        return state[-1]
+
+    cnt1 = count_infections(start_state(input), 10000, complex=False)
+    cnt2 = count_infections(start_state(input), 10000000, complex=True)
+    return [
+        cnt1,
+        cnt2,
+    ]
+
 def solve(day, input, answers):
     func = globals()[f"run_{day}"]
     print(f"Solving {day} ...")
