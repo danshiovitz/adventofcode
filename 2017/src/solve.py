@@ -903,6 +903,91 @@ def run_day20(input):
         len(post_collision),
     ]
 
+def run_day21(input):
+    def variants(g):
+        def r(g):
+            return tuple(
+                "".join(g[j][-(i+1)] for j in range(len(g[0])))
+                for i in range(len(g))
+            )
+
+        def f(g):
+            return tuple("".join(row[::-1]) for row in g)
+
+        rots = [g, r(g), r(r(g)), r(r(r(g)))]
+        return set(v for v in rots + [f(g) for g in rots])
+
+    def subdivide(grid):
+        sz = (2 if len(grid) % 2 == 0 else 3)
+        parts = len(grid) // sz
+        return tuple(
+            tuple(row[x*sz:(x+1)*sz] for row in grid[y*sz:(y+1)*sz])
+            for y in range(parts)
+            for x in range(parts)
+        )
+
+    def join_subs(subs):
+        sz = int(len(subs) ** 0.5)
+        return tuple(
+            ''.join(s[x] for s in subs[y:y+sz])
+            for y in range(0, len(subs), sz) for x in range(len(subs[0]))
+        )
+
+    def load_patterns(lines):
+        def canonical(line):
+            return tuple(r for r in line.split("/"))
+
+        lookups = {}
+        p3s = {}
+        for line in lines:
+            m = re.match(r'^(\S*)\s*=>\s*(\S*)$', line)
+            if not m:
+                raise Exception(f"Bad line: {line}")
+            pattern = canonical(m.group(1))
+            output = canonical(m.group(2))
+            if len(pattern) not in (2, 3):
+                raise Exception(f"Bad pattern length: {line}")
+            for v in variants(pattern):
+                lookups[v] = output
+            if len(pattern) == 3:
+                p3s[pattern] = output
+
+        patterns = {}
+        for pattern, output in p3s.items():
+            # prepare three mappings: 3->4, 3(->4)->6, 3(->4->6)->9
+            map4 = [output]
+            map6 = [join_subs([lookups[s] for s in subdivide(map4[0])])]
+            map9 = subdivide(join_subs([lookups[s] for s in subdivide(map6[0])]))
+            for v in variants(pattern):
+                patterns[v] = [map4, map6, map9]
+
+        return patterns
+
+    def count_pixels(init, max_iterations, patterns):
+        cache = {}
+        def recur(state):
+            if state in cache:
+                return cache[state]
+            cur, it = state
+            if it <= 0:
+                tot = sum(row.count('#') for row in cur)
+            else:
+                idx = min(it, 3)
+                it -= idx
+                tot = sum(recur((p, it)) for p in patterns[cur][idx-1])
+            cache[state] = tot
+            return tot
+        return recur((init, max_iterations))
+
+    patterns = load_patterns(input)
+    init = ('.#.', '..#', '###')
+    cnt_5 = count_pixels(init, 5, patterns)
+    cnt_18 = count_pixels(init, 18, patterns)
+    return [
+        cnt_5,
+        cnt_18,
+    ]
+
 def solve(day, input, answers):
     func = globals()[f"run_{day}"]
     print(f"Solving {day} ...")
@@ -917,25 +1002,28 @@ def solve(day, input, answers):
         else:
             print("")
 
-def load_file(fname, trim=False):
+def load_file(fname, raw=False):
     fpath = Path(fname)
     if not fpath.exists():
         return []
     with open(fpath) as f:
-        return [line.strip() if trim else line for line in f.readlines()
-                if not line[0] == '#']
+        if raw:
+            return [re.sub(r'[\r\n]+', '', line) for line in f.readlines()]
+        else:
+            return [line.strip() for line in f.readlines() if line[0] != '#']
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Solve advent of code problems')
     parser.add_argument('days', metavar='day', nargs='+', help='days to solve')
     parser.add_argument('--input', default='', help='Custom input to use (a string)')
     parser.add_argument('--answer', default='', help='Custom answer to use (a string)')
+    parser.add_argument('--raw', action='store_true', help='Read files without cleanup')
     args = parser.parse_args()
 
     if len(args.days) == 1:
         day = args.days[0]
-        inp = [args.input] if args.input else load_file(f"inputs/{day}", trim=False)
-        ans = [args.answer] if args.answer else load_file(f"answers/{day}", trim=True)
+        inp = [args.input] if args.input else load_file(f"inputs/{day}", raw=args.raw)
+        ans = [args.answer] if args.answer else load_file(f"answers/{day}", raw=args.raw)
         return [(args.days[0], inp, ans)]
     else:
         raise Exception("Can only handle one day right now")
