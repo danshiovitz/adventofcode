@@ -3,6 +3,7 @@ import argparse
 from collections import Counter, defaultdict
 from functools import reduce
 from itertools import combinations, count, groupby, permutations
+import math
 import operator
 from pathlib import Path
 import re
@@ -1038,6 +1039,72 @@ def run_day22(input):
     return [
         cnt1,
         cnt2,
+    ]
+
+def run_day23(input):
+    def parse(line):
+        m = re.match(r'([a-z]+)((?:\s+(?:[a-z]+|-?[0-9]+))*)', line)
+        if not m:
+            raise Exception(f"Can't parse: {line}")
+        action = m.group(1)
+        args = re.split(r'\s+', m.group(2).strip())
+        return (action, args)
+
+    def run_single(instruction, registers, top, queues=None):
+        def val(a):
+            try:
+                return int(a)
+            except ValueError:
+                return registers[a]
+
+        action, args = instruction
+        jumped = False
+        if action == "set":
+            registers[args[0]] = val(args[1])
+        elif action == "sub":
+            registers[args[0]] -= val(args[1])
+        elif action == "mul":
+            registers[args[0]] *= val(args[1])
+            registers["ret"] += 1
+        elif action == "jnz":
+            if val(args[0]) != 0:
+                registers["pc"] += val(args[1])
+                jumped = True
+        else:
+            raise Exception(f"Unknown action {action}")
+        if not jumped:
+            registers["pc"] += 1
+        if registers["pc"] < 0 or registers["pc"] >= top:
+            registers["terminated"] = True
+
+    def run_instructions(insts):
+        registers = defaultdict(int)
+        top = len(instructions)
+        while True:
+            run_single(instructions[registers["pc"]], registers, top)
+            if registers["terminated"]:
+                return registers["ret"]
+
+    # https://stackoverflow.com/a/18833870
+    def is_prime(n):
+        if n % 2 == 0 and n > 2:
+            return False
+        return all(n % i for i in range(3, int(math.sqrt(n)) + 1, 2))
+
+    def cheat_pt2(insts):
+        b = int(insts[0][1][1])
+        b *= int(insts[4][1][1])
+        b -= int(insts[5][1][1])
+        c = b - int(insts[7][1][1])
+        inc = -int(insts[30][1][1])
+        return sum(1 for i in range(b, c+1, inc) if not is_prime(i))
+
+    instructions = [parse(line) for line in input]
+    muls = run_instructions(instructions)
+    h_val = cheat_pt2(instructions)
+    return [
+        muls,
+        h_val,
     ]
 
 def solve(day, input, answers):
