@@ -1107,6 +1107,58 @@ def run_day23(input):
         h_val,
     ]
 
+def run_day24(input):
+    # assumes we don't have any duplicate components, which might not
+    # actually be a good assumption
+    def load_components(lines):
+        ports = defaultdict(set)
+        for line in lines:
+            m = re.match(r'^([0-9]+)/([0-9]+)$', line)
+            if not m:
+                raise Exception(f"Bad line: {line}")
+            component = (int(m.group(1)), int(m.group(2)))
+            ports[component[0]].add(component)
+            ports[component[1]].add(component)
+        return ports
+
+    def better_by_strength(cur, best):
+        cur_str, cur_cs = cur
+        best_str, best_cs = best
+        return cur_str > best_str
+
+    def better_by_length(cur, best):
+        cur_str, cur_cs = cur
+        best_str, best_cs = best
+        if len(cur_cs) == len(best_cs):
+            return cur_str > best_str
+        else:
+            return len(cur_cs) > len(best_cs)
+
+    def make_best_bridge(portmap, better):
+        def recur(port, used):
+            best_str = 0
+            best_components = []
+            for cur in portmap[port] - used:
+                other_port = cur[0] if port == cur[1] else cur[1]
+                cur_used = used | {cur}
+                cur_str, cur_cs = recur(other_port, cur_used)
+                cur_str += (cur[0] + cur[1])
+                cur_cs = [cur] + cur_cs
+                if better((cur_str, cur_cs), (best_str, best_components)):
+                    best_str = cur_str
+                    best_components = cur_cs
+            return best_str, best_components
+        return recur(0, set())
+
+    portmap = load_components(input)
+
+    beststr_str, best_cs = make_best_bridge(portmap, better_by_strength)
+    bestlen_str, best_cs = make_best_bridge(portmap, better_by_length)
+    return [
+        beststr_str,
+        bestlen_str,
+    ]
+
 def solve(day, input, answers):
     func = globals()[f"run_{day}"]
     print(f"Solving {day} ...")
