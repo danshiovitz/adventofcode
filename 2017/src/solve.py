@@ -1159,6 +1159,57 @@ def run_day24(input):
         bestlen_str,
     ]
 
+def run_day25(input):
+    def parse_re(rex, line):
+        m = re.match(rex, line)
+        if not m:
+            raise Exception(f"Bad parse for {rex}: {line}")
+        return list(m.groups())
+
+    def read_val(lines):
+        val1, *_ = parse_re(r'If the current value is ([01])', lines.pop(0))
+        write1, *_ = parse_re(r'- Write the value ([01])', lines.pop(0))
+        move1, *_ = parse_re(r'- Move one slot to the (left|right)', lines.pop(0))
+        next1, *_ = parse_re(r'- Continue with state ([A-Z]+)', lines.pop(0))
+        mval = -1 if move1 == "left" else 1
+        return (int(val1), {'write': int(write1), 'move': mval, 'next': next1})
+
+    def parse_input(lines):
+        lines = [line for line in lines if line != ""]
+
+        start, *_ = parse_re(r'Begin in state ([A-Z]+)', lines.pop(0))
+        steps, *_ = parse_re(r'Perform a diagnostic checksum after (\d+) steps', lines.pop(0))
+        steps = int(steps)
+
+        states = {}
+        while lines:
+            name, *_ = parse_re(r'In state ([A-Z]+)', lines.pop(0))
+            val1, actions1 = read_val(lines)
+            val2, actions2 = read_val(lines)
+            states[name] = {val1: actions1, val2: actions2}
+        return start, steps, states
+
+    def run_program(start_state, states, steps):
+        state = start_state
+        cursor = 0
+        tape = set()
+        for _ in range(steps):
+            cur_val = 1 if cursor in tape else 0
+            vs = states[state][cur_val]
+            if vs['write'] == 0:
+                tape.discard(cursor)
+            else:
+                tape.add(cursor)
+            cursor += vs['move']
+            state = vs['next']
+        return len(tape)
+
+    start_state, steps, states = parse_input(input)
+    diagnostic = run_program(start_state, states, steps)
+    return [
+        diagnostic,
+    ]
+
 def solve(day, input, answers):
     func = globals()[f"run_{day}"]
     print(f"Solving {day} ...")
