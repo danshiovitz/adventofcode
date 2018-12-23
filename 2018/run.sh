@@ -1,3 +1,3 @@
 #!/bin/bash
 
-nim c -r --verbosity:0 solve.nim
+nim c -r --verbosity:0 solve.nim $*
