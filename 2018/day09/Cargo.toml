@@ -14,3 +14,9 @@ itertools = "0.5.10"
 name = "solve"
 path = "solve.rs"
 
+[[bin]]
+name = "solve2"
+path = "solve2.rs"
+
+[profile.release]
+debug = true

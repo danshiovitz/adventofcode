@@ -28,7 +28,7 @@ fn circular_remove(idx: i32, buffer: &mut Vec<usize>) -> (usize, usize) {
     return (value, next_idx);
 }
 
-fn calc_high_score(num_players: usize, last_score: usize, verbose: bool) -> (usize, usize) {
+fn calc_high_score(num_players: usize, last_marble: usize, verbose: bool) -> (usize, usize) {
     let mut circle = vec![0];
     let mut next_number = 1;
     let mut cur_marble = 0;
@@ -38,18 +38,11 @@ fn calc_high_score(num_players: usize, last_score: usize, verbose: bool) -> (usi
     loop {
         if next_number % 23 == 0 {
             let (removed_value, next_marble) = circular_remove(cur_marble as i32 - 7, &mut circle);
-            println!("NN: {}, Old cur: {}, new cur: {}, new size: {}", next_number, cur_marble, next_marble, circle.len());
             let score = next_number + removed_value;
             scores[cur_player] += score;
             cur_marble = next_marble;
             if verbose {
                 println!("Player {} scores {} + {} = {}", cur_player + 1, next_number, removed_value, score);
-            }
-            if score == last_score {
-                let widx = (0..scores.len()).max_by_key(|p| scores[*p]).unwrap();
-                return (widx + 1, scores[widx]);
-            } else if next_number > last_score {
-                panic!("Something has gone terribly wrong as we hit {}+{} = {}", next_number, removed_value, score);
             }
         } else {
             cur_marble = circular_insert(cur_marble as i32 + 2, next_number, &mut circle);
@@ -57,6 +50,11 @@ fn calc_high_score(num_players: usize, last_score: usize, verbose: bool) -> (usi
 
         if verbose {
             println!("[{}] {} : ({})", cur_player + 1, join(circle.iter(), " "), circle[cur_marble]);
+        }
+
+        if next_number == last_marble {
+            let widx = (0..scores.len()).max_by_key(|p| scores[*p]).unwrap();
+            return (widx + 1, scores[widx]);
         }
 
         next_number += 1;
@@ -67,8 +65,8 @@ fn calc_high_score(num_players: usize, last_score: usize, verbose: bool) -> (usi
 fn main() {
     let args : Vec<String> = std::env::args().collect();
     let num_players = args[1].parse().unwrap();
-    let last_score = args[2].parse().unwrap();
+    let last_marble = args[2].parse().unwrap();
     let verbose = args.len() > 3;
-    let (winning_player, high_score) = calc_high_score(num_players, last_score, verbose);
+    let (winning_player, high_score) = calc_high_score(num_players, last_marble, verbose);
     println!("Calculated high score = {}, winning player = {}", high_score, winning_player);
 }
