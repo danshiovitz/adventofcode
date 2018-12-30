@@ -14,6 +14,22 @@ type Point struct {
   y int
 }
 
+func point_less_than(a Point, b Point) bool {
+    if a.y != b.y {
+      return a.y < b.y
+    } else {
+      return a.x < b.x
+    }
+}
+
+func str_points(path []Point) string {
+  ret := make([]string, len(path))
+  for i, p := range(path) {
+    ret[i] = fmt.Sprintf("(%d,%d)", p.x, p.y)
+  }
+  return strings.Join(ret, " ")
+}
+
 type Unit struct {
     xy Point
     team byte
@@ -63,7 +79,9 @@ func parse_input(path string) (Cave, []Unit) {
 func by_point(units []Unit) map[Point]*Unit {
   ret := make(map[Point]*Unit)
   for i, u := range(units) {
-    ret[u.xy] = &units[i]
+    if units[i].hp > 0 {
+      ret[u.xy] = &units[i]
+    }
   }
   return ret
 }
@@ -88,7 +106,9 @@ func print_cave(cave Cave, units []Unit) {
   }
   hp_str := make([]string, 0)
   for _, unit := range(units) {
-    hp_str = append(hp_str, fmt.Sprintf("%s(%s)", string(unit.team), strconv.Itoa(unit.hp)))
+    if unit.hp > 0 {
+      hp_str = append(hp_str, fmt.Sprintf("%s(%s)", string(unit.team), strconv.Itoa(unit.hp)))
+    }
   }
   fmt.Printf("Unit hps: %s\n", strings.Join(hp_str, ", "))
   fmt.Println()
@@ -114,125 +134,129 @@ func find_ordered_adjacencies(point Point) []Point {
   }
 }
 
-type Segment struct {
-  distance int
-  origin Point
+func calc_dist_everywhere(start Point, cave Cave, units []Unit, verbose int) map[Point]int {
+    bp := by_point(units)
+    ret := make(map[Point]int)
+    working := make([]Point, 1)
+    working[0] = start
+    ret[start] = 0
+
+    if verbose > 2 {
+      fmt.Printf("Considering dists from (%d,%d)\n", start.x, start.y)
+    }
+
+    for len(working) > 0 {
+      next := working[0]
+      working = working[1:]
+      dist, f := ret[next]
+      if !f {
+        log.Fatal("Can't find dist for item")
+      }
+      for _, adj := range(find_ordered_adjacencies(next)) {
+        if cave[adj.y][adj.x] != '.' {
+          continue
+        }
+        if _, found := bp[adj]; found {
+          continue
+        }
+        if _, found := ret[adj]; !found {
+          working = append(working, adj)
+          ret[adj] = dist + 1
+          if verbose > 2 {
+            fmt.Printf("Reached (%d,%d) as %d\n", adj.x, adj.y, dist + 1)
+          }
+        }
+      }
+    }
+
+    return ret
 }
 
-func find_free_adjacencies(point Point, seen map[Point]Segment, cave Cave) []Point {
-  ret := make([]Point, 0, 4)
-  for _, adj := range(find_ordered_adjacencies(point)) {
-    if _, found := seen[adj]; found {
-      continue
-    }
-    if cave[adj.y][adj.x] != '.' {
-      continue
-    }
-    ret = append(ret, adj)
+func calc_paths(start Point, end Point, d int, dists map[Point]int, verbose int) [][]Point {
+  ret := make([][]Point, 0)
+  if start == end {
+    ret = append(ret, []Point{})
+    return ret
   }
+
+  for _, adj := range(find_ordered_adjacencies(end)) {
+    if ad, found := dists[adj]; found && ad < d {
+      if verbose > 1 {
+        fmt.Printf("Found backstep at %d to (%d,%d)\n", ad, adj.x, adj.y)
+      }
+      for _, subpath := range(calc_paths(start, adj, ad, dists, verbose)) {
+        ret = append(ret, append(subpath, end))
+      }
+    }
+  }
+
   return ret
 }
 
 func pick_move(start Point, targets []Point, cave Cave, units []Unit, verbose int) (bool, Point) {
-  seen := make(map[Point]Segment)
-  working := make(map[Point]bool)
-  for _, u := range(units) {
-    if u.hp > 0 && u.xy != start {
-      seen[u.xy] = Segment { distance: math.MaxInt32, origin: u.xy }
-    }
-  }
-  // Add the initial adjacencies of all the targets - these are our
-  // actual destinations
-  for _, p := range(targets) {
-    for _, adj := range(find_free_adjacencies(p, seen, cave)) {
-      seen[adj] = Segment { distance: 0, origin: adj }
-      working[adj] = true
-    }
-  }
-
-  // Floodfill from targets until we reach start
-  for len(working) > 0 {
-    if verbose > 1 {
-      ws := make([]string, 0, len(working))
-      for k := range(working) {
-        ws = append(ws, fmt.Sprintf("(%d,%d)", k.x, k.y))
+  in_range := make([]Point, 0)
+  for _, target := range(targets) {
+    for _, adj := range(find_ordered_adjacencies(target)) {
+      if cave[adj.y][adj.x] != '.' {
+        continue
       }
-      fmt.Printf("Working set is %s\n", strings.Join(ws, " "))
-    }
-
-    if _, found := working[start]; found {
-      if verbose > 1 {
-        fmt.Printf("Found start in working set: (%d,%d)\n", start.x, start.y)
-      }
-      break
-    }
-
-    new_working := make(map[Point]bool)
-    for w := range(working) {
-      for _, adj := range(find_free_adjacencies(w, seen, cave)) {
-        w_seen, found := seen[w]
-        if !found {
-          log.Fatal("Everything's terrible")
+      occupied := false
+      for _, unit := range(units) {
+        if unit.xy == adj && unit.hp > 0 {
+          occupied = true
+          break
         }
-        seen[adj] = Segment { distance: w_seen.distance + 1, origin: w_seen.origin }
-        new_working[adj] = true
+      }
+      if !occupied {
+        in_range = append(in_range, adj)
+        if verbose > 1 {
+          fmt.Printf("Considering in-range point (%d,%d)\n", adj.x, adj.y)
+        }
       }
     }
-    working = new_working
   }
 
-  type Possible struct {
-    origin Point
-    point Point
-    distance int
-  }
-  possibles := make([]Possible, 0)
+  dists := calc_dist_everywhere(start, cave, units, verbose)
 
-  for _, adj := range(find_ordered_adjacencies(start)) {
-    if val, found := seen[adj]; found && val.distance < math.MaxInt32 {
-      possibles = append(possibles, Possible { origin: val.origin, point: adj, distance: val.distance })
-    }
-  }
-
-  sort.SliceStable(possibles, func(i, j int) bool {
-    // Sort by distance, then the point of origin, then by the adjancency point
-    if possibles[i].distance != possibles[j].distance {
-      return possibles[i].distance < possibles[j].distance
-    } else if possibles[i].origin != possibles[j].origin {
-      if possibles[i].origin.y == possibles[j].origin.y {
-        return possibles[i].origin.x < possibles[j].origin.x
+  best_dist := math.MaxInt32
+  var best_in_range Point
+  for _, ir := range(in_range) {
+    if dist, found := dists[ir]; found {
+      if dist < best_dist || (dist == best_dist && point_less_than(ir, best_in_range)) {
+        best_dist = dist
+        best_in_range = ir
+        if verbose > 1 {
+          fmt.Printf("New best dist is %d to (%d,%d)\n", dist, ir.x, ir.y)
+        }
       } else {
-        return possibles[i].origin.y < possibles[j].origin.y
-      }
-    } else {
-      if possibles[i].point.y == possibles[j].point.y {
-        return possibles[i].point.x < possibles[j].point.x
-      } else {
-        return possibles[i].point.y < possibles[j].point.y
+        if verbose > 1 {
+          fmt.Printf("Skipping point (%d,%d) with dist of %d\n", ir.x, ir.y, dist)
+        }
       }
     }
-  })
-
-  if len(possibles) > 0 {
-    if verbose > 1 {
-      fmt.Printf("Selected (%d,%d) to reach (%d,%d) in %d\n",
-        possibles[0].point.x, possibles[0].point.y,
-        possibles[0].origin.x, possibles[0].origin.y,
-        possibles[0].distance)
-      for i := 1; i < len(possibles); i++ {
-        fmt.Printf("NOT selecting (%d,%d) to reach (%d,%d) in %d\n",
-          possibles[i].point.x, possibles[i].point.y,
-          possibles[i].origin.x, possibles[i].origin.y,
-          possibles[i].distance)
-      }
-    }
-    return true, possibles[0].point
-  } else {
-    if verbose > 1 {
-      fmt.Printf("No legal move found\n")
-    }
-    return false, Point{ x: -1, y: -1 }
   }
+
+  if best_dist == math.MaxInt32 {
+    if verbose > 1 {
+      fmt.Printf("Best dist is max, must be no path to any targets\n")
+    }
+    return false, Point { x: -1, y: -1 }
+  }
+
+  best_step := Point { x: math.MaxInt32, y: math.MaxInt32 }
+  for _, path := range(calc_paths(start, best_in_range, best_dist, dists, verbose)) {
+    if len(path) != best_dist {
+      log.Fatal("path mismatch: ", str_points(path), best_dist)
+    }
+    if point_less_than(path[0], best_step) {
+      best_step = path[0]
+      if verbose > 1 {
+        fmt.Printf("New best step is to (%d,%d)\n", path[0].x, path[0].y)
+      }
+    }
+  }
+
+  return best_step.x != math.MaxInt32, best_step
 }
 
 func do_move(me int, point Point, units []Unit, verbose int) {
@@ -274,7 +298,7 @@ func do_attack(me int, target int, units []Unit, verbose int) {
   units[target].hp -= units[me].damage
 }
 
-func unit_acts(me int, cave Cave, units []Unit, verbose int) (bool, byte, int) {
+func unit_acts(me int, cave Cave, units []Unit, verbose int) (bool, byte) {
   if verbose > 1 {
     fmt.Printf("===Unit %s (%d,%d) acts\n", string(units[me].team), units[me].xy.x, units[me].xy.y)
   }
@@ -283,7 +307,7 @@ func unit_acts(me int, cave Cave, units []Unit, verbose int) (bool, byte, int) {
     if verbose > 1 {
       fmt.Printf("Unit is dead, doing nothing\n")
     }
-    return false, ' ', -1
+    return false, ' '
   }
 
   enemy_points := find_enemies(me, units, verbose)
@@ -292,7 +316,7 @@ func unit_acts(me int, cave Cave, units []Unit, verbose int) (bool, byte, int) {
     if verbose > 0 {
       fmt.Printf("All my enemies have perished!\n")
     }
-    return true, units[me].team, -1
+    return true, units[me].team
   }
 
   any_attack, target := pick_target(me, units, verbose)
@@ -317,10 +341,16 @@ func unit_acts(me int, cave Cave, units []Unit, verbose int) (bool, byte, int) {
     }
   }
 
-  return false, ' ', target
+  return false, ' '
 }
 
-func mortal_kombat(cave Cave, units []Unit, verbose int) (byte, int, int, int) {
+func mortal_kombat(damage int, cave Cave, units_orig []Unit, verbose int) (byte, int, int, int) {
+  units := append([]Unit{}, units_orig...)
+  for i := range(units) {
+    if units[i].team == 'E' {
+      units[i].damage = damage
+    }
+  }
   rounds := 0
   game_over := false
   var winner byte
@@ -331,11 +361,7 @@ func mortal_kombat(cave Cave, units []Unit, verbose int) (byte, int, int, int) {
 
   for !game_over {
     sort.SliceStable(units, func(i, j int) bool {
-      if units[i].xy.y == units[j].xy.y {
-        return units[i].xy.x < units[j].xy.x
-      } else {
-        return units[i].xy.y < units[j].xy.y
-      }
+      return point_less_than(units[i].xy, units[j].xy)
     })
 
     if verbose > 0 {
@@ -343,16 +369,7 @@ func mortal_kombat(cave Cave, units []Unit, verbose int) (byte, int, int, int) {
     }
 
     for i := 0; i < len(units); i++ {
-      target := -1
-      game_over, winner, target = unit_acts(i, cave, units, verbose)
-      if target != -1 {
-        if units[target].hp <= 0 {
-          units = append(units[:target], units[target+1:]...)
-          if target < i {
-            i--
-          }
-        }
-      }
+      game_over, winner = unit_acts(i, cave, units, verbose)
       if game_over {
         break
       }
@@ -382,13 +399,42 @@ func mortal_kombat(cave Cave, units []Unit, verbose int) (byte, int, int, int) {
   return winner, num, hp, rounds
 }
 
+// This was originally a binary search, but it turns out the search space isn't continuous
+func mortal_victory_search(min_damage int, max_damage int, cave Cave, units []Unit, verbose int) (byte, int, int, int, int) {
+  starting_elves := 0
+  for i := range(units) {
+    if units[i].team == 'E' {
+      starting_elves++
+    }
+  }
+  for damage := min_damage; damage <= max_damage; damage++ {
+    team, num, hp, rounds := mortal_kombat(damage, cave, units, verbose)
+    if team == 'E' && num == starting_elves {
+      fmt.Printf("Elves win with damage %d!\n", damage)
+      fmt.Printf("This seems to be optimal\n")
+      return team, num, hp, rounds, damage
+    } else if team == 'E' {
+      fmt.Printf("Elves win with losses with damage %d!\n", damage)
+    } else {
+      fmt.Printf("Goblins win with elf-damage %d!\n", damage)
+    }
+  }
+  log.Fatal("Elves can't win even with max damage")
+  return 'G', -1, -1, -1, -1
+}
+
 func main() {
   cave, units := parse_input(os.Args[1])
   verbose := 0
   if len(os.Args) > 2 {
       verbose, _ = strconv.Atoi(os.Args[2])
   }
-  team, num, hp, rounds := mortal_kombat(cave, units, verbose)
+  team, num, hp, rounds := mortal_kombat(3, cave, units, verbose)
   fmt.Printf("The winner after %d rounds is team %s, with %d members having %d hp\n", rounds, string(team), num, hp)
+  fmt.Printf("Outcome: %d\n", rounds * hp)
+
+  damage := 3
+  team, num, hp, rounds, damage = mortal_victory_search(4, 200, cave, units, verbose)
+  fmt.Printf("With damage %d, the winner after %d rounds is team %s, with %d members having %d hp\n", damage, rounds, string(team), num, hp)
   fmt.Printf("Outcome: %d\n", rounds * hp)
 }
