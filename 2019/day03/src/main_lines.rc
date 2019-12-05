@@ -1,0 +1,223 @@
+#[macro_use] extern crate failure;
+#[macro_use] extern crate lazy_static;
+
+use failure::{Error, err_msg};
+use itertools::Itertools;
+use regex::Regex;
+use std::cmp::Ordering;
+use std::io::{BufReader,BufRead};
+use std::fs::File;
+
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+struct Point {
+    x: i32,
+    y: i32
+}
+
+impl Ord for Point {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let sd = self.x.abs() + self.y.abs();
+        let od = other.x.abs() + other.y.abs();
+        if sd == od {
+            return self.x.cmp(&other.x);
+        } else {
+            return sd.cmp(&od);
+        }
+    }
+}
+
+impl PartialOrd for Point {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+fn flip(point: Point) -> Point {
+    return Point{x: point.y, y: point.x};
+}
+
+#[derive(Debug)]
+struct Wire {
+    start: Point,
+    end: Point
+}
+
+fn flip_wire(wire: &Wire) -> Wire {
+    return Wire{start: flip(wire.start), end: flip(wire.end)};
+}
+
+fn parse_int(val: &str) -> Result<i32, Error> {
+    return Ok(val.parse::<i32>()?);
+}
+
+fn make_wire(start: Point, segment: &str) -> Result<Wire, Error> {
+    let ln : i32 = parse_int(&segment[1..])?;
+    let dir = segment.chars().next().ok_or(err_msg("No dir in segment"))?;
+    if dir == 'U' {
+        return Ok(Wire { start: start, end: Point { x: start.x, y: start.y + ln } });
+    } else if dir == 'D' {
+        return Ok(Wire { start: Point { x: start.x, y: start.y - ln }, end: start });
+    } else if dir == 'R' {
+        return Ok(Wire { start: start, end: Point { x: start.x + ln, y: start.y } });
+    } else if dir == 'L' {
+        return Ok(Wire { start: Point { x: start.x - ln, y: start.y }, end: start });
+    } else {
+        bail!("Unknown dir: {}", dir);
+    }
+}
+
+fn parse_line(line: &str) -> Result<Vec<Wire>, Error> {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r",\s*").unwrap();
+    }
+    let mut start = Point { x: 0, y: 0};
+    let mut wires = Vec::new();
+    for segment in RE.split(&line) {
+        let wire = make_wire(start, &segment)?;
+        if wire.start == start {
+            start = wire.end;
+        } else {
+            start = wire.start;
+        }
+        wires.push(wire);
+    }
+    return Ok(wires);
+}
+
+fn read_input(file: &str) -> Result<Vec<Vec<Wire>>, Error> {
+    let f = File::open(file)?;
+    let br = BufReader::new(f);
+    return br.lines().map(|line| parse_line(&line?)).collect();
+}
+
+fn get_overlap(wire1: &Wire, wire2: &Wire) -> Option<Point> {
+    if wire1.start.x == wire1.end.x {
+        if wire2.start.x == wire2.end.x {
+            if wire1.start.x != wire2.start.x {
+                return None;
+            }
+            if wire1.start.y >= wire2.start.y && wire1.start.y <= wire2.end.y {
+                return Some(Point { x: wire1.start.x, y: wire1.start.y });
+            }
+            if wire2.start.y >= wire1.start.y && wire2.start.y <= wire1.end.y {
+                return Some(Point { x: wire2.start.x, y: wire2.start.y });
+            }
+            return None;
+        } else if wire2.start.y == wire2.end.y {
+            if wire1.start.x >= wire2.start.x && wire1.start.x <= wire2.end.x &&
+               wire2.start.y >= wire1.start.y && wire2.start.y <= wire1.end.y {
+                return Some(Point { x: wire1.start.x, y: wire2.start.y });
+            }
+            return None;
+        } else {
+            panic!("Bad wire: {:?}", wire2);
+        }
+    } else if wire1.start.y == wire1.end.y {
+        if wire2.start.y == wire2.end.y {
+            if wire1.start.y != wire2.start.y {
+                return None;
+            }
+            if wire1.start.x >= wire2.start.x && wire1.start.x <= wire2.end.x {
+                return Some(Point { x: wire1.start.x, y: wire1.start.y });
+            }
+            if wire2.start.x >= wire1.start.x && wire2.start.x <= wire1.end.x {
+                return Some(Point { x: wire2.start.x, y: wire2.start.y });
+            }
+            return None;
+        } else if wire2.start.x == wire2.end.x {
+            if wire1.start.y >= wire2.start.y && wire1.start.y <= wire2.end.y &&
+               wire2.start.x >= wire1.start.x && wire2.start.x <= wire1.end.x {
+                return Some(Point { x: wire2.start.x, y: wire1.start.y });
+            }
+            return None;
+        } else {
+            panic!("Bad wire: {:?}", wire2);
+        }
+    } else {
+        panic!("Bad wire: {:?}", wire1);
+    }
+}
+
+fn find_overlaps(wires1: &Vec<Wire>, wires2: &Vec<Wire>) -> Vec<Point> {
+    let mut ret = Vec::new();
+    for w1 in wires1 {
+        for w2 in wires2 {
+            match get_overlap(&w1, &w2) {
+                Some(p) => { ret.push(p) },
+                None => {},
+            }
+        }
+    }
+    return ret;
+}
+
+fn test_overlaps() {
+    let wires = vec![
+        // Same orientation:
+        Wire { start: Point{x: 3, y: 2}, end: Point{x: 7, y: 2} },
+        Wire { start: Point{x: -3, y: 2}, end: Point{x: 2, y: 2} },
+        Wire { start: Point{x: -1, y: 2}, end: Point{x: 4, y: 2} },
+        Wire { start: Point{x: 4, y: 2}, end: Point{x: 6, y: 2} },
+        Wire { start: Point{x: 5, y: 2}, end: Point{x: 9, y: 2} },
+        Wire { start: Point{x: 8, y: 2}, end: Point{x: 12, y: 2} },
+        // Crosswise:
+        Wire { start: Point{x: 0, y: -1}, end: Point{x: 0, y: 5} },
+        Wire { start: Point{x: 3, y: -1}, end: Point{x: 3, y: 5} },
+        Wire { start: Point{x: 5, y: -1}, end: Point{x: 5, y: 5} },
+        Wire { start: Point{x: 7, y: -1}, end: Point{x: 7, y: 5} },
+        Wire { start: Point{x: 10, y: -1}, end: Point{x: 10, y: 5} },
+        Wire { start: Point{x: 5, y: -6}, end: Point{x: 5, y: -1} },
+        Wire { start: Point{x: 5, y: 6}, end: Point{x: 5, y: 8} },
+    ];
+    let overlaps = vec![
+        // Same orientation:
+        Some(Point{x: 3, y: 2}),
+        None,
+        Some(Point{x: 3, y: 2}),
+        Some(Point{x: 4, y: 2}),
+        Some(Point{x: 5, y: 2}),
+        None,
+        // Crosswise:
+        None,
+        Some(Point{x: 3, y: 2}),
+        Some(Point{x: 5, y: 2}),
+        Some(Point{x: 7, y: 2}),
+        None,
+        None,
+        None,
+    ];
+
+    fn check(wire1: &Wire, wire2: &Wire, expected: Option<Point>) {
+        let actual = get_overlap(&wire1, &wire2);
+        assert!(actual == expected, "Expected {:?} * {:?} = {:?} but got {:?}",
+            wire1, wire2, expected, actual);
+    }
+
+    for i in 0..wires.len()-1 {
+        check(&wires[0], &wires[i], overlaps[i]);
+        check(&wires[i], &wires[0], overlaps[i]);
+        let fw0 = flip_wire(&wires[0]);
+        let fwi = flip_wire(&wires[i]);
+        let fo = overlaps[i].map(|o| flip(o));
+        check(&fw0, &fwi, fo);
+        check(&fwi, &fw0, fo);
+    }
+}
+
+fn main() {
+    test_overlaps();
+    let args : Vec<String> = std::env::args().collect();
+    if args[1] == "1" {
+        println!("Doing part 1");
+        let wire_lists = read_input(&args[2]).unwrap();
+        assert!(wire_lists.len() == 2, "Should have exactly two wire lists");
+        let overlaps = find_overlaps(&wire_lists[0], &wire_lists[1]);
+        for overlap in &overlaps {
+            println!("Found overlap: {:?}", overlap)
+        }
+        let nearest = overlaps.into_iter().filter(|o| o != &Point{x: 0, y: 0}).sorted().next().unwrap();
+        println!("Nearest: {:?} = {}", nearest, nearest.x.abs() + nearest.y.abs());
+    } else {
+        println!("Doing part 2");
+    }
+}
