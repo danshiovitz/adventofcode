@@ -72,14 +72,20 @@ fn find_best_vantage(data: &Data) -> ((i32, i32), i32) {
 
 fn filtered_ratios(
   ratios: &Vec<(i32, i32)>,
-  filter: impl Fn((i32, i32)) -> bool,
-  keyf: impl Fn((i32, i32)) -> f32) -> Vec<(i32, i32)> {
+  filter: impl Fn((i32, i32)) -> bool) -> Vec<(i32, i32)> {
     let mut ret : Vec<(i32, i32)> = Vec::new();
     for ratio in ratios {
         if filter(*ratio) {
             ret.push(*ratio);
         }
     }
+    let keyf = |(cx, cy)| {
+        if cx == 0 || cy == 0 {
+            return (cx + cy) as f32;
+        } else {
+            return cy as f32 / cx as f32;
+        }
+    };
     ret.sort_by(|a, b| { return *&keyf(*a).partial_cmp(&keyf(*b)).unwrap(); });
     // println!("Filter:");
     // for r in &ret {
@@ -113,14 +119,14 @@ fn find_vaporization_order(x: i32, y: i32, data: &Data) -> Vec<(i32, i32)> {
 
     let bk : Vec<(i32, i32)> = blockers.keys().map(|v| *v).collect();
     let mut bks : Vec<(i32, i32)> = Vec::new();
-    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx == 0 && cy < 0; }, |(_cx, cy)| { return cy as f32; }));
-    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx > 0 && cy < 0; }, |(cx, cy)| { return cy as f32 / cx as f32; }));
-    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx > 0 && cy == 0; }, |(cx, _cy)| { return cx as f32; }));
-    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx > 0 && cy > 0; }, |(cx, cy)| { return cy as f32 / cx as f32; }));
-    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx == 0 && cy > 0; }, |(_cx, cy)| { return cy as f32; }));
-    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx < 0 && cy > 0; }, |(cx, cy)| { return cy as f32 / cx as f32; }));
-    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx < 0 && cy == 0; }, |(cx, _cy)| { return cx as f32; }));
-    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx < 0 && cy < 0; }, |(cx, cy)| { return cy as f32 / cx as f32; }));
+    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx == 0 && cy < 0; }));
+    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx > 0 && cy < 0; }));
+    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx > 0 && cy == 0; }));
+    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx > 0 && cy > 0; }));
+    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx == 0 && cy > 0; }));
+    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx < 0 && cy > 0; }));
+    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx < 0 && cy == 0; }));
+    bks.extend(filtered_ratios(&bk, |(cx, cy)| { return cx < 0 && cy < 0; }));
 
     let mut vaporized = Vec::new();
     loop {
