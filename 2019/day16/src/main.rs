@@ -20,7 +20,7 @@ fn read_input(file: &str) -> Result<Vec<i32>, Error> {
     return Ok(parsed?.into_iter().flatten().collect());
 }
 
-fn do_transform(digits: &Vec<i32>, rounds: i32) -> Vec<i32> {
+fn do_transform(digits: &Vec<i32>, rounds: i32, chunksize: usize) -> Vec<i32> {
     let mut output = digits.to_vec();
     let mut by_pos = Vec::new();
     for _ in 0..output.len() {
@@ -58,7 +58,69 @@ fn do_transform(digits: &Vec<i32>, rounds: i32) -> Vec<i32> {
         }
         println!(" {}", line);
     }
-    return output;
+    return output.into_iter().take(chunksize).collect();
+}
+
+fn do_transform_fast(digits: &Vec<i32>, rounds: i32, chunksize: usize, use_offset: bool) -> Vec<i32> {
+    let repeat = 10000;
+    let total_size = digits.len() as i32 * repeat;
+
+    let mut offset = 0;
+    if use_offset {
+        offset = digits.iter().take(7).format("").to_string().parse::<i32>().unwrap();
+    }
+    if offset <= total_size / 2 {
+        panic!("This transform code is only smart enough to handle the second half of the digits ({}, min {})",
+               offset, total_size / 2);
+    }
+
+    // in the second half of the input, the pattern for digits ABC..Z in the output is
+    // A is based on the sum of A..Z
+    // B is based on the sum of B..Z
+    // ...
+    // Z is based on the sum of Z
+    // (Note that Z is the very last digit of the input - you can't stop early)
+    //
+    // Doing a bunch of examples, apparently this means that after r rounds,
+    //   A_r = P(r, 0) * A_0 + P(r, 1) * B_0 + ... P(r, n) * Z_0
+    //   B_r = P(r, 0) * B_0 + P(r, 1) * C_0 + ... P(r, n-1) * Z_0
+    // Where P(r, n) is the r'th item from the (n+r)th row of pascal's triangle
+    // Y_r is always ((Z_0 * r) + Y_0) % 10 and Z_r is always Z_0, but that will
+    // hopefully fall out naturally
+    fn nth_digit(n: i32, digits: &Vec<i32>) -> i32 {
+        return n % (digits.len() as i32);
+    }
+
+    let mut output = vec![0; chunksize];
+    if rounds == 0 {
+        for d in 0..chunksize {
+            output[d] = nth_digit(offset + (d as i32), &digits);
+        }
+    } else {
+        let mut last_pascal : i32 = 1;
+        for idx in 0..(total_size - offset) {
+            let row : i32 = 5 + idx - 1;
+            let column : i32 = 5 - 1;
+            let ll = last_pascal % 10;
+            assert!(row >= 0 && column >= 0);
+            if row == column {
+                last_pascal = 1;
+            } else {
+                last_pascal *= row;
+                last_pascal /= (row - column);
+            }
+
+            // let num_digits = std::cmp::min(chunksize as i32, total_size - (offset + idx) + 1);
+            // for d in 0..num_digits {
+            //     let digit = nth_digit(offset + idx + (d as i32), &digits);
+            //     output[d] = (output[d] + ((digit * last_pascal) % 10) as i32) % 10;
+            // }
+
+            println!("Pascal: {} {} {}{}{}", last_pascal, last_pascal % 10, ll, row % 10, column % 10);
+        }
+    }
+
+    return output.into_iter().take(chunksize).collect();
 }
 
 fn make_pattern(sz: usize) -> HashMap<(usize, usize), i32> {
@@ -101,9 +163,12 @@ fn main() {
     if args[1] == "1" {
         println!("Doing part 1");
         let digits = read_input(&args[2]).unwrap();
-        let transformed = do_transform(&digits, 4);
-        println!("Digits: {:?}", transformed.into_iter().take(20).format(""));
+        let transformed = do_transform(&digits, 4, 8);
+        println!("Digits: {:?}", transformed.into_iter().format(""));
     } else {
         println!("Doing part 2");
+        let digits = read_input(&args[2]).unwrap();
+        let transformed = do_transform_fast(&digits, 100, 8, true);
+        println!("Digits: {:?}", transformed.into_iter().format(""));
     }
 }
