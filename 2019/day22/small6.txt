@@ -1,0 +1,3 @@
+deal with increment 3
+deal into new stack
+deal into new stack
