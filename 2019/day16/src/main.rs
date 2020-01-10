@@ -74,6 +74,8 @@ fn do_transform_fast(digits: &Vec<i32>, rounds: i32, chunksize: usize, use_offse
                offset, total_size / 2);
     }
 
+    println!("offset: {}, total: {}, total - offset: {}", offset, total_size, total_size - offset);
+
     // in the second half of the input, the pattern for digits ABC..Z in the output is
     // A is based on the sum of A..Z
     // B is based on the sum of B..Z
@@ -123,6 +125,41 @@ fn do_transform_fast(digits: &Vec<i32>, rounds: i32, chunksize: usize, use_offse
     return output.into_iter().take(chunksize).collect();
 }
 
+fn do_transform_fast_dumber(digits: &Vec<i32>, rounds: i32, chunksize: usize, use_offset: bool) -> Vec<i32> {
+    let repeat = 10000;
+    let total_size = digits.len() as i32 * repeat;
+
+    let mut offset = 0;
+    if use_offset {
+        offset = digits.iter().take(7).format("").to_string().parse::<i32>().unwrap();
+    }
+    if offset <= total_size / 2 {
+        panic!("This transform code is only smart enough to handle the second half of the digits ({}, min {})",
+               offset, total_size / 2);
+    }
+
+    // in the second half of the input, the pattern for digits ABC..Z in the output is
+    // A is based on the sum of A..Z
+    // B is based on the sum of B..Z
+    // ...
+    // Z is based on the sum of Z
+    // (Note that Z is the very last digit of the input - you can't stop early)
+    let mut working = vec![0; (total_size - offset) as usize];
+    for idx in 0..working.len() {
+        working[idx] = digits[(offset as usize + idx) % digits.len()];
+    }
+
+    for _ in 0..rounds {
+        let mut tot = 0;
+        for idx in (0..working.len()).rev() {
+            tot += working[idx];
+            working[idx] = (tot % 10);
+        }
+    }
+
+    return working.into_iter().take(chunksize).collect();
+}
+
 fn make_pattern(sz: usize) -> HashMap<(usize, usize), i32> {
     lazy_static! {
         static ref PHASES: Vec<i32> = vec![0, 1, 0, -1];
@@ -168,7 +205,7 @@ fn main() {
     } else {
         println!("Doing part 2");
         let digits = read_input(&args[2]).unwrap();
-        let transformed = do_transform_fast(&digits, 100, 8, true);
+        let transformed = do_transform_fast_dumber(&digits, 100, 8, true);
         println!("Digits: {:?}", transformed.into_iter().format(""));
     }
 }
