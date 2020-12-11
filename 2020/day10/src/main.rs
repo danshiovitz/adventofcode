@@ -1,5 +1,5 @@
 use failure::Error;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::io::{BufReader,BufRead};
 use std::fs::File;
 
@@ -68,27 +68,29 @@ fn find_combos2(values: &Vec<i64>) -> i64 {
     cpy.insert(0, 0);
     cpy.insert(cpy.len(), cpy[cpy.len() - 1] + 3);
 
-    return find_combos2_recur(&cpy, 0, &mut HashSet::new());
+    return find_combos2_recur(&cpy, 0, &mut HashMap::new());
 }
 
-fn find_combos2_recur(values: &Vec<i64>, idx: usize, cache: &mut HashSet<usize>) -> i64 {
-    if idx >= values.len() {
-        return 0;
+fn find_combos2_recur(values: &Vec<i64>, idx: usize, cache: &mut HashMap<usize, i64>) -> i64 {
+    if let Some(val) = cache.get(&idx) {
+        return *val;
+    }
+
+    if idx >= values.len() - 1 {
+        cache.insert(idx, 1);
+        return 1;
     }
 
     let mut combos = 0;
-    for i in 2..4 {
+    for i in 1..4 {
         if idx+i < values.len() && values[idx] + 3 >= values[idx+i] {
             let recur = find_combos2_recur(values, idx + i, cache);
-            println!("Considering {}, {} -> {}", values[idx], values[idx+i], recur);
+            // println!("Considering {}, {} -> {}", values[idx], values[idx+i], recur);
             combos += recur;
-        } else if idx+i < values.len() {
-            println!("MM: {} {}", values[idx] + 3, values[idx+i]);
-        } else {
-            println!("OUT OF RANGE: {}", idx+i);
         }
     }
-    return combos + find_combos2_recur(values, idx + 1, cache);
+    cache.insert(idx, combos);
+    return combos;
 }
 
 fn main() {
