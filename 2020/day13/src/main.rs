@@ -117,7 +117,6 @@ fn calc_prize_time(schedule: &Schedule) -> BigInt {
         r_period = j_period.clone();
         r_phase = &j_phase % &j_period;
     }
-    println!("i see {} {}", &r_phase, &r_period);
     if &r_phase < &Zero::zero() {
         r_phase += &r_period;
     }
