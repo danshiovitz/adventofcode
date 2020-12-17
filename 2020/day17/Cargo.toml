@@ -1,0 +1,12 @@
+[package]
+name = "day17"
+version = "0.1.0"
+authors = ["Dan Shiovitz <dshiovitz@fb.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+failure = "0.1.8"
+regex = "1"
+lazy_static = "1.4.0"
