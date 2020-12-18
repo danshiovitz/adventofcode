@@ -1,26 +1,34 @@
 use failure::{Error, bail};
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::io::{BufReader, BufRead};
 use std::fs::File;
 
-type Map = HashSet<(i64, i64, i64, i64)>;
+type Map = HashSet<Vec<i64>>;
 
 struct Level {
     map: Map,
-    min: (i64, i64, i64, i64),
-    max: (i64, i64, i64, i64),
+    dims: usize,
+    min: Vec<i64>,
+    max: Vec<i64>,
 }
 
-fn read_input(file: &str) -> Result<Level, Error> {
+fn read_input(file: &str, dims: usize) -> Result<Level, Error> {
+    if dims < 2 {
+        bail!("Dimensions val is {}, must be at least 2", dims);
+    }
     let f = File::open(file)?;
     let br = BufReader::new(f);
-    let mut lvl = Level { map: HashSet::new(), min: (0, 0, 0, 0), max: (0, 0, 0, 0) };
+    let mut lvl = Level { map: HashSet::new(), dims: dims, min: vec![0 as i64; dims], max: vec![0 as i64; dims] };
     let mut max_x = 0;
     let mut max_y = 0;
     for (y, line) in br.lines().enumerate() {
         for (x, c) in line?.chars().enumerate() {
             if c == '#' {
-                lvl.map.insert((x as i64, y as i64, 0 as i64, 0 as i64));
+                let mut cur = vec![0 as i64; dims];
+                cur[0] = x as i64;
+                cur[1] = y as i64;
+                lvl.map.insert(cur);
             } else if c == '.' {
                 continue;
             } else {
@@ -30,52 +38,54 @@ fn read_input(file: &str) -> Result<Level, Error> {
         }
         if y as i64 > max_y { max_y = y as i64; }
     }
-    lvl.max = (max_x, max_y, 0, 0);
+    lvl.max[0] = max_x;
+    lvl.max[1] = max_y;
     return Ok(lvl);
 }
 
-fn print_map(lvl: &Level) -> () {
-    for w in lvl.min.3 .. lvl.max.3 + 1 {
-        for z in lvl.min.2 .. lvl.max.2 + 1 {
-            println!("z={}, w={}", z, w);
-            for y in lvl.min.1 .. lvl.max.1 + 1 {
-                for x in lvl.min.0 .. lvl.max.0 + 1 {
-                    let ch = if lvl.map.contains(&(x, y, z, w)) { '#' } else { '.' };
-                    print!("{}", ch);
-                }
-                println!();
-            }
+fn print_one(lvl: &Level, higher: &Vec<i64>) -> () {
+    let names = vec!["z", "w", "v", "u"];
+    if lvl.dims > names.len() {
+        panic!("Not enough names!");
+    }
+    if higher.len() > 0 {
+        println!("{}", higher.iter().enumerate().map(|(idx, val)| format!("{}={}", names[idx], val)).join(", "));
+    }
+    for y in lvl.min[1] .. lvl.max[1] + 1 {
+        for x in lvl.min[0] .. lvl.max[0] + 1 {
+            let mut cur = higher.clone();
+            cur.insert(0, y);
+            cur.insert(0, x);
+            let ch = if lvl.map.contains(&cur) { '#' } else { '.' };
+            print!("{}", ch);
         }
+        println!();
+    }
+}
+
+fn print_map(lvl: &Level) -> () {
+    let mut highers : Vec<Vec<i64>> = (2..lvl.dims).map(|i| lvl.min[i]..(lvl.max[i] + 1)).multi_cartesian_product().collect();
+    if highers.len() == 0 {
+        highers.push(Vec::new());
+    }
+    for higher in highers {
+        print_one(lvl, &higher);
     }
     println!();
 }
 
-fn neighbors(cur: (i64, i64, i64, i64), use_w: bool) -> Vec<(i64, i64, i64, i64)> {
-    let w_min = if use_w { -1 } else { 0 };
-    let w_max = if use_w { 2 } else { 1 };
-    let mut ret = Vec::new();
-    for x in -1..2 {
-        for y in -1..2 {
-            for z in -1..2 {
-                for w in w_min..w_max {
-                    if x == 0 && y == 0 && z == 0 && w == 0 {
-                        continue;
-                    }
-                    ret.push((cur.0 + x, cur.1 + y, cur.2 + z, cur.3 + w));
-                }
-            }
-        }
-    }
-    return ret;
+fn neighbors(cur: &Vec<i64>) -> Vec<Vec<i64>> {
+    return (0..cur.len()).map(|i| (cur[i] - 1)..(cur[i] + 2))
+    .multi_cartesian_product().filter(|n| n != cur).collect();
 }
 
-fn cycle(lvl: &Level, use_w: bool) -> Level {
+fn cycle(lvl: &Level) -> Level {
     let mut nxt = HashSet::new();
 
     let mut neighboring_inactive = HashMap::new();
     for cur in &lvl.map {
         let mut active_cnt = 0;
-        for n in neighbors(*cur, use_w) {
+        for n in neighbors(cur) {
             if lvl.map.contains(&n) {
                 active_cnt += 1;
             } else if let Some(cnt) = neighboring_inactive.get_mut(&n) {
@@ -85,7 +95,7 @@ fn cycle(lvl: &Level, use_w: bool) -> Level {
             }
         }
         if active_cnt == 2 || active_cnt == 3 {
-            nxt.insert(*cur);
+            nxt.insert(cur.clone());
         }
     }
 
@@ -94,29 +104,19 @@ fn cycle(lvl: &Level, use_w: bool) -> Level {
         nxt.insert(cur);
     }
 
-    let min = (
-        nxt.iter().map(|(x, _y, _z, _w)| *x).min().unwrap(),
-        nxt.iter().map(|(_x, y, _z, _w)| *y).min().unwrap(),
-        nxt.iter().map(|(_x, _y, z, _w)| *z).min().unwrap(),
-        nxt.iter().map(|(_x, _y, _z, w)| *w).min().unwrap(),
-    );
-    let max = (
-        nxt.iter().map(|(x, _y, _z, _w)| *x).max().unwrap(),
-        nxt.iter().map(|(_x, y, _z, _w)| *y).max().unwrap(),
-        nxt.iter().map(|(_x, _y, z, _w)| *z).max().unwrap(),
-        nxt.iter().map(|(_x, _y, _z, w)| *w).max().unwrap(),
-    );
-    return Level { map: nxt, min: min, max: max };
+    let min = (0..lvl.dims).map(|i| nxt.iter().map(|c| c[i]).min().unwrap()).collect();
+    let max = (0..lvl.dims).map(|i| nxt.iter().map(|c| c[i]).max().unwrap()).collect();
+    return Level { map: nxt, dims: lvl.dims, min: min, max: max };
 }
 
-fn cycle_times(lvl: &Level, times: i32, use_w: bool, verbose: bool) -> i64 {
-    let mut cur = Level { map: lvl.map.clone(), min: lvl.min, max: lvl.max };
+fn cycle_times(lvl: &Level, times: i32, verbose: bool) -> i64 {
+    let mut cur = Level { map: lvl.map.clone(), dims: lvl.dims, min: lvl.min.clone(), max: lvl.max.clone() };
     for _ in 0..times {
         if verbose {
             print_map(&cur);
             println!();
         }
-        cur = cycle(&cur, use_w);
+        cur = cycle(&cur);
     }
     if verbose {
         print_map(&cur);
@@ -128,15 +128,15 @@ fn main() {
     let args : Vec<String> = std::env::args().collect();
     if args[1] == "1" {
         println!("Doing part 1");
-        let lvl = read_input(&args[2]).unwrap();
+        let lvl = read_input(&args[2], 3).unwrap();
         let verbose = args.len() > 3 && args[3].chars().nth(0).unwrap() == 't';
-        let cnt = cycle_times(&lvl, 6, false, verbose);
+        let cnt = cycle_times(&lvl, 6, verbose);
         println!("At final cycle, {}", cnt);
     } else {
         println!("Doing part 2");
-        let lvl = read_input(&args[2]).unwrap();
+        let lvl = read_input(&args[2], 4).unwrap();
         let verbose = args.len() > 3 && args[3].chars().nth(0).unwrap() == 't';
-        let cnt = cycle_times(&lvl, 6, true, verbose);
+        let cnt = cycle_times(&lvl, 6, verbose);
         println!("At final cycle, {}", cnt);
     }
 }
