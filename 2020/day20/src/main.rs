@@ -83,10 +83,10 @@ fn parse_tile(buf: &Vec<String>) -> Result<(Tile, i64), Error> {
                 ret.edges[1].push(c);
             }
             if y == tile_len - 1 {
-                ret.edges[2].push(c);
+                ret.edges[2].insert(0, c);
             }
             if x == 0 {
-                ret.edges[3].push(c);
+                ret.edges[3].insert(0, c);
             }
         }
     }
@@ -178,11 +178,29 @@ fn assemble(image_data: &ImageData, pairing_map: &PairingMap, starting_corner: i
             let (tid, top_id, left_id) =
                 find_one(x, y, image_data, pairing_map, starting_corner, &placed, &mut ret);
             placed.insert(tid);
-            let unrot = compute_unrotation(tid, top_id, left_id, image_data, pairing_map);
-            ret.insert((x, y), (tid, unrot));
+            ret.insert((x, y), (tid, 0));
         }
     }
     return ret;
+}
+
+fn rotate_pieces(image_data: &ImageData, pairing_map: &PairingMap, assembly_map: &mut AssemblyMap) -> () {
+    let mut top_priors = HashMap::new();
+    let mut left_priors = HashMap::new();
+    let second_id = assembly_map.get(&(1, 0)).unwrap().0;
+    for y in 0..image_data.tile_count {
+        for x in 0..image_data.tile_count {
+            let val = assembly_map.get_mut(&(x, y)).unwrap();
+            let tid = val.0;
+            let top_id = top_priors.remove(&(x, y));
+            let left_id = left_priors.remove(&(x, y));
+            let unrot = compute_unrotation(tid, second_id, top_id, left_id, image_data, pairing_map);
+            val.1 = unrot;
+
+            top_priors.insert((x, y+1), (tid, unrot >= 4));
+            left_priors.insert((x+1, y), (tid, unrot >= 4));
+        }
+    }
 }
 
 fn find_one(x: i64, y: i64, image_data: &ImageData, pairing_map: &PairingMap, starting_corner: i64, placed: &HashSet<i64>, assembly_map: &mut AssemblyMap) -> (i64, Option<i64>, Option<i64>) {
@@ -226,46 +244,73 @@ fn find_one(x: i64, y: i64, image_data: &ImageData, pairing_map: &PairingMap, st
     }
 }
 
-fn compute_unrotation(tid: i64, top_id: Option<i64>, left_id: Option<i64>, image_data: &ImageData, pairing_map: &PairingMap) -> i64 {
+fn compute_unrotation(tid: i64, second_id: i64, top_id: Option<(i64, bool)>, left_id: Option<(i64, bool)>, image_data: &ImageData, pairing_map: &PairingMap) -> i64 {
     let nghs = pairing_map.get(&tid).unwrap();
     let top_rotations = compute_unrotation_one(top_id, false, &nghs);
     let left_rotations = compute_unrotation_one(left_id, true, &nghs);
-    let isect : HashSet<i64> = top_rotations.intersection(&left_rotations).map(|x| *x).collect();
-    println!("Top rotations for {}: {:?}", tid, top_rotations);
-    println!("Left rotations for {}: {:?}", tid, left_rotations);
+    let mut isect : HashSet<i64> = top_rotations.intersection(&left_rotations).map(|x| *x).collect();
+    // println!("Top rotations for {}: {:?}", tid, top_rotations);
+    // println!("Left rotations for {}: {:?}", tid, left_rotations);
     if isect.len() > 1 {
         println!("Found multiple rotations for {}: {:?}", tid, isect);
+        assert!(top_id.is_none());
+        assert!(left_id.is_none());
+        // of these ambiguous rotations, we have to pick the one that matches our right tile
+        // (if we were placing and then rotating one at a time, we wouldn't have to, but
+        // we've already determined placement so we have to use the one that matches the next
+        // tile)
+        let unrot_idx = |rotation: i64| {
+            // math here seems hokey to the extreme
+            if rotation <= 1 {
+                return 1 - rotation;
+            } else if rotation <= 3 {
+                return 5 - rotation;
+            } else {
+                return 7 - rotation;
+            }
+        };
+        isect.retain(|rot: &i64| {
+            let idx = unrot_idx(*rot) as usize;
+            if let Some(val) = nghs[idx] {
+                return val.0 == second_id;
+            } else {
+                return false;
+            }
+        });
     }
-    return isect.into_iter().sorted().nth(0).unwrap();
+    return isect.into_iter().nth(0).unwrap();
 }
 
-fn compute_unrotation_one(other_id: Option<i64>, is_left: bool, nghs: &Vec<Option<(i64, bool)>>) -> HashSet<i64> {
-    let pick_rot = |idx: usize, is_left: bool| -> i64 {
-        // based on how our rotations and edges are labelled,
-        // if X is the edge num we've found on top, the rotation num is 4 - X
-        // if it's a left edge, the rotation is 3 - X
+fn compute_unrotation_one(other_id: Option<(i64, bool)>, is_left: bool, nghs: &Vec<Option<(i64, bool)>>) -> HashSet<i64> {
+    let pick_rot = |idx: usize, reverse: bool, is_left: bool| -> i64 {
         if is_left {
-            return 3 - (idx as i64);
+            let mut rot = 3 - (idx as i64);
+            if reverse {
+                rot = (rot + 2) % 4 + 4;
+            }
+            return rot;
         } else {
-            // is_top
-            return (4 - (idx as i64)) % 4;
+            return (4 - (idx as i64)) % 4 + (if reverse { 4 } else { 0 });
         }
     };
 
     if other_id.is_none() {
         // for external edges, we don't know if they should be flipped or not, so try both
         return (0..4_usize).filter(|i| nghs[*i].is_none())
-            .map(|en| pick_rot(en, is_left))
-            .flat_map(|en| vec![en, en + 4])
+            .flat_map(|en| vec![pick_rot(en, false, is_left), pick_rot(en, true, is_left)])
             .collect();
     }
 
     let other_id = other_id.unwrap();
     return (0..4_usize).filter_map(|i| {
         if let Some(ngh) = nghs[i] {
-            if ngh.0 == other_id {
-                println!("FOUND AT {}", i);
-                Some(pick_rot(i, is_left) + if ngh.1 { 4 } else { 0 })
+            if ngh.0 == other_id.0 {
+                // reverse flag is true if we had to flip edges to match up
+                // and their tile isn't flipped, or we didn't flip but they're
+                // flipped. except, sigh, top/bottom and left/right actually need
+                // to be reversed to match up normally, so invert that.
+                let use_reverse = ngh.1 == other_id.1;
+                Some(pick_rot(i, use_reverse, is_left))
             } else {
                 None
             }
@@ -275,21 +320,106 @@ fn compute_unrotation_one(other_id: Option<i64>, is_left: bool, nghs: &Vec<Optio
     }).collect();
 }
 
-// fn make_image(image_data: &ImageData, assembly_map: &AssemblyMap) -> Image {
-//
-// }
+fn make_image(image_data: &ImageData, assembly_map: &AssemblyMap) -> Image {
+    let info : HashMap<i64, (i64, (i64, i64))> =
+        assembly_map.iter().map(|(k, (t, r))| (*t, (*r, *k))).collect();
 
-fn print_unrot(data: HashSet<(i64, i64)>, side_len: i64, rotation: i64) {
+    let tile_len = image_data.tile_len;
+    let tile_count = image_data.tile_count;
+    let mut ret = Image { data: HashSet::new(), image_len: tile_count * (tile_len - 2)};
+    for tile in &image_data.tiles {
+        let cur_info = info.get(&tile.id).unwrap();
+        let rotation = cur_info.0;
+        let unrotated = rotate_data(&tile.data, tile_len, rotation);
+        let converted = unrotated.iter()
+            .filter(|(x, y)| *x != 0 && *y != 0 && *x != tile_len - 1 && *y != tile_len - 1)
+            .map(|(x, y)| {
+                // moved down because we chopped off the borders:
+                let mut i = x - 1;
+                let mut j = y - 1;
+                i += cur_info.1.0 * (tile_len - 2); // -2 because of borders
+                j += cur_info.1.1 * (tile_len - 2);
+                (i, j)
+            });
+        ret.data.extend(converted);
+    }
+    return ret;
+}
+
+fn rotate_data(data: &HashSet<(i64, i64)>, side_len: i64, rotation: i64) -> HashSet<(i64, i64)> {
+    let mut ret = HashSet::new();
     for i in 0..side_len {
         for j in 0..side_len {
-            let (x, y) =
-                if rotation == 0 {
-                    (j, i)
-                } elif rotation == 1 {
+            let (mut x, mut y) = (j, i);
+            if rotation >= 4 {
+                x = side_len - x - 1;
+            }
+            for _ in 0..(rotation % 4) {
+                let tmp_x = x;
+                x = y;
+                y = side_len - tmp_x - 1;
+            }
+            if data.contains(&(x, y)) {
+                ret.insert((j, i));
+            }
+        }
+    }
+    return ret;
+}
 
-                }
+fn unrotate_data(data: &HashSet<(i64, i64)>, side_len: i64, rotation: i64) -> HashSet<(i64, i64)> {
+    let new_rotation = if rotation < 4 {
+        (4 - rotation) % 4
+    } else {
+        rotation
+    };
+    return rotate_data(data, side_len, new_rotation);
+}
+
+fn print_data(data: &HashSet<(i64, i64)>, side_len: i64) -> () {
+    for y in 0..side_len {
+        for x in 0..side_len {
             let ch = if data.contains(&(x, y)) { '#' } else { '.' };
-            print(ch);
+            print!("{}", ch);
+        }
+        println!();
+    }
+}
+
+fn find_sea_monsters(data: &HashSet<(i64, i64)>, side_len: i64) -> HashSet<(i64, i64)> {
+    let offsets : Vec<(i64, i64)> = vec![
+        (18, 0),
+        (0, 1), (5, 1), (6, 1), (11, 1), (12, 1), (17, 1), (18, 1), (19, 1),
+        (1, 2), (4, 2), (7, 2), (10, 2), (13, 2), (16, 2),
+    ];
+    let max_x = side_len - offsets.iter().map(|o| o.0).max().unwrap() + 1;
+    let max_y = side_len - offsets.iter().map(|o| o.1).max().unwrap() + 1;
+    let mut ret = HashSet::new();
+    for y in 0..max_y {
+        for x in 0..max_x {
+            let monster : Vec<(i64, i64)> = offsets.iter().map(|o| (x + o.0, y + o.1)).collect();
+            if monster.iter().all(|m| data.contains(m)) {
+                ret.extend(monster);
+            }
+        }
+    }
+    return ret;
+}
+
+fn print_with_sea_monsters(data: &HashSet<(i64, i64)>, sea_monsters: &HashSet<(i64, i64)>, side_len: i64) -> () {
+    for y in 0..side_len {
+        for x in 0..side_len {
+            let ch =
+                if data.contains(&(x, y)) {
+                    if sea_monsters.contains(&(x, y)) {
+                        'O'
+                    } else {
+                        '#'
+                    }
+                } else {
+                    '.'
+                };
+            print!("{}", ch);
         }
         println!();
     }
@@ -306,20 +436,94 @@ fn main() {
         assert_eq!(corners.len(), 4);
         println!("Corners: {}, {}, {}, {} = {}",
             corners[0], corners[1], corners[2], corners[3], corners.iter().fold(1, |acc, x| acc * *x));
-    } else {
+    } else if args[1] == "2" {
         println!("Doing part 2");
         let image_data = read_input(&args[2]).unwrap();
         let verbose = args.len() > 3 && args[3].chars().nth(0).unwrap() == 't';
         let pairing_map = make_pairing_map(&image_data);
         let corners = find_corners(&pairing_map);
         assert_eq!(corners.len(), 4);
-        let assembly_map = assemble(&image_data, &pairing_map, corners[1]);
+        let mut assembly_map = assemble(&image_data, &pairing_map, corners[0]);
+        rotate_pieces(&image_data, &pairing_map, &mut assembly_map);
+        let image = make_image(&image_data, &assembly_map);
 
-        for y in 0..image_data.tile_count {
-            for x in 0..image_data.tile_count {
-                let tile = assembly_map.get(&(x, y)).unwrap();
-                println!("At {},{}: {} {}", x, y, tile.0, tile.1);
+        // for y in 0..image_data.tile_count {
+        //     for x in 0..image_data.tile_count {
+        //         let tile = assembly_map.get(&(x, y)).unwrap();
+        //         println!("At {},{}: {} {}", x, y, tile.0, tile.1);
+        //     }
+        // }
+
+        // print_data(&image.data, image.image_len);
+        for rot in 0..8 {
+            let rotated = rotate_data(&image.data, image.image_len, rot);
+            let monsters = find_sea_monsters(&rotated, image.image_len);
+            if monsters.len() > 0 {
+                println!("Rotation: {}", rot);
+                print_with_sea_monsters(&rotated, &monsters, image.image_len);
+                println!();
+                println!("Unoccupied water: {}", rotated.difference(&monsters).count());
             }
         }
+    } else if args[1] == "test_rotate_unrotate" {
+        println!("Doing test");
+        let data : HashSet<(i64, i64)> = vec![
+            (1, 1), (2, 1), (3, 1), (4, 1), (1, 2),
+        ].into_iter().collect();
+        for rot in 0..8 {
+            let rotated = rotate_data(&data, 8, rot);
+            println!("Rotation {}", rot);
+            print_data(&rotated, 8);
+            let unrotated = unrotate_data(&rotated, 8, rot);
+            if unrotated != data {
+                println!("Rotation mismatch:");
+                print_data(&unrotated, 8);
+            } else {
+                println!("Unrotated ok");
+            }
+            println!();
+        }
+    } else if args[1] == "test_rotate_pieces" {
+        println!("Doing test");
+        let image_data = read_input(&args[2]).unwrap();
+        let pairing_map = make_pairing_map(&image_data);
+        let mut assembly_map : AssemblyMap = vec![
+            ((0, 0), (1951, 0)),
+            ((1, 0), (2311, 0)),
+            ((2, 0), (3079, 0)),
+            ((0, 1), (2729, 0)),
+            ((1, 1), (1427, 0)),
+            ((2, 1), (2473, 0)),
+            ((0, 2), (2971, 0)),
+            ((1, 2), (1489, 0)),
+            ((2, 2), (1171, 0)),
+        ].into_iter().collect();
+        rotate_pieces(&image_data, &pairing_map, &mut assembly_map);
+        let image = make_image(&image_data, &assembly_map);
+        print_data(&image.data, image.image_len);
+
+        // for y in 0..image_data.tile_count {
+        //     for x in 0..image_data.tile_count {
+        //         let tile = assembly_map.get(&(x, y)).unwrap();
+        //         println!("At {},{}: {} {}", x, y, tile.0, tile.1);
+        //     }
+        // }
+    } else if args[1] == "test_unrotate_only" {
+        println!("Doing test");
+        let image_data = read_input(&args[2]).unwrap();
+        let tid : i64 = args[3].parse().unwrap();
+        let rotation : i64 = args[4].parse().unwrap();
+        let tile = image_data.tiles.iter().filter(|t| t.id == tid).nth(0).unwrap();
+        println!("Raw:");
+        print_data(&tile.data, image_data.tile_len);
+        println!("");
+        for edge in &tile.edges {
+            println!("Edge: {}", edge);
+        }
+        println!("");
+        let unrotated = unrotate_data(&tile.data, image_data.tile_len, rotation);
+        println!("Unrotated:");
+        print_data(&unrotated, image_data.tile_len);
+        println!();
     }
 }
