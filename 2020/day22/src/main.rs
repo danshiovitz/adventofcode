@@ -105,8 +105,8 @@ fn play_recur_game_inner(all_decks: &mut Vec<Vec<VecDeque<i32>>>, game: usize, v
 
         if verbose {
             println!("Round {}, Game {}:", round, game);
-            for deck in &all_decks[game] {
-                println!("{:?}", deck);
+            for (idx, deck) in all_decks[game].iter().enumerate() {
+                println!("Player {}: {:?}", idx+1, deck);
             }
             println!();
         }
