@@ -19,6 +19,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "day07"
+version = "0.1.0"
+dependencies = [
+ "common",
+]
+
+[[package]]
 name = "lazy-regex"
 version = "2.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

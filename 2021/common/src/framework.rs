@@ -1,8 +1,11 @@
 use std::boxed::Box;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 
 use lazy_regex::regex;
+
+use crate::grid::{Coord, Grid};
 
 pub type InputReader = BufReader<Box<dyn Read>>;
 
@@ -61,6 +64,26 @@ where
     }
     return vals;
 }
+
+pub fn parse_grid<F, T>(input: &mut InputReader, parse_coord: &mut F) -> Grid<T>
+where
+    F: FnMut(char, &Coord) -> T,
+{
+    let mut coords: HashMap<Coord, T> = HashMap::new();
+    let mut max_x = 0;
+    let mut max_y = 0;
+    for (y, line) in input.lines().enumerate() {
+        for (x, ch) in line.unwrap().chars().enumerate() {
+            let coord = Coord {x: x as i32, y: y as i32};
+            let val = parse_coord(ch, &coord);
+            coords.insert(coord, val);
+            max_x = x as i32;
+        }
+        max_y = y as i32;
+    }
+    return Grid::<T> { coords: coords, min: Coord {x: 0, y: 0}, max: Coord {x: max_x, y: max_y}};
+}
+
 
 fn load_expected(fname: &str) -> Vec<String> {
     let mut expected = Vec::new();
