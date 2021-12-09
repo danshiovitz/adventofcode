@@ -40,10 +40,10 @@ fn solve_entry(entry: &Entry) -> i32 {
     let six: &HashSet<char> = find_match(&mut |p| p.len() == 6 && p.intersection(&one).count() == 1);
 
     let digits = vec![zero, one, two, three, four, five, six, seven, eight, nine];
-    return 1000 * digits.iter().position(|d| **d == entry.output[0]).unwrap() as i32 +
-        100 * digits.iter().position(|d| **d == entry.output[1]).unwrap() as i32 +
-        10 * digits.iter().position(|d| **d == entry.output[2]).unwrap() as i32 +
-        1 * digits.iter().position(|d| **d == entry.output[3]).unwrap() as i32;
+    let to_val = |d| digits.iter().position(|p| *p == d).unwrap() as i32;
+    let s = entry.output.iter().map(|d| to_val(d)).fold(0, |tot, val| tot * 10 + val);
+    // println!("Val: {}", s);
+    return s;
 }
 
 impl BaseDay for Day08 {
