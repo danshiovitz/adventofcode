@@ -1,22 +1,25 @@
 extern crate common;
 
-use std::collections::HashSet;
-
 use common::framework::{parse_grid, run_day, BaseDay, InputReader};
-use common::grid::{Coord, Grid, four_neighbors};
+use common::grid::{Coord, Grid, color_grid, four_neighbors};
 
 struct Day09 {
     vals: Grid<i32>,
 }
 
 fn is_lower(a: &Coord, b: &Coord, grid: &Grid<i32>) -> bool {
-    return grid.coords.get(a).unwrap_or(&10) < grid.coords.get(b).unwrap_or(&10);
+    return grid.coords.get(a).unwrap_or(&9) < grid.coords.get(b).unwrap_or(&9);
 }
 
 impl BaseDay for Day09 {
     fn parse(&mut self, input: &mut InputReader) {
-        fn parse_coord(c: char, _coord: &Coord) -> i32 {
-            return c.to_digit(10).unwrap() as i32;
+        fn parse_coord(c: char, _coord: &Coord) -> Option<i32> {
+            let val = c.to_digit(10).unwrap() as i32;
+            if val < 9 {
+                Some(val)
+            } else {
+                None
+            }
         }
 
         self.vals = parse_grid(input, &mut parse_coord);
@@ -33,72 +36,12 @@ impl BaseDay for Day09 {
     }
 
     fn pt2(&mut self) -> String {
-        let mut unassigned: HashSet<Coord> = self.vals.coords.iter().filter_map(|(k, v)| if *v < 9 { Some(*k) } else { None }).collect();
-        let mut basins: Vec<HashSet<Coord>> = vec![];
-
-        while !unassigned.is_empty() {
-            let coord: Coord = *unassigned.iter().next().unwrap();
-            //println!("Checking {:?}", coord);
-            unassigned.remove(&coord);
-
-            let nghs: Vec<Coord> = four_neighbors(&coord);
-            let mut cur_basin: Option<usize> = None;
-            for idx in 0..basins.len() {
-                if basins[idx].contains(&coord) {
-                    cur_basin = Some(idx);
-                    break;
-                }
-            }
-
-            for ngh in nghs {
-                if unassigned.contains(&ngh) {
-                    // neighbor not assigned a basin yet
-                    // are we assigned a basin yet?
-                    if cur_basin.is_none() {
-                        cur_basin = Some(basins.len());
-                        basins.push(HashSet::from([coord, ngh]));
-                        //println!("...neighbor {:?} is unassigned, goes to new basin ({}) with us", ngh, cur_basin.unwrap());
-                    } else {
-                        basins[cur_basin.unwrap()].insert(ngh);
-                        //println!("...neighbor {:?} is unassigned, goes to our basin {}", ngh, cur_basin.unwrap());
-                    }
-                } else {
-                    let nv = *self.vals.coords.get(&ngh).unwrap_or(&10);
-                    if nv >= 9 {
-                        continue;
-                    }
-
-                    let mut ngh_basin: Option<usize> = None;
-                    for idx in 0..basins.len() {
-                        if basins[idx].contains(&ngh) {
-                            ngh_basin = Some(idx);
-                            break;
-                        }
-                    }
-                    // are we assigned a basin yet?
-                    if cur_basin.is_none() {
-                        basins[ngh_basin.unwrap()].insert(coord);
-                        cur_basin = ngh_basin;
-                        //println!("...neighbor {:?} has a basin, we go to it {}", ngh, ngh_basin.unwrap());
-                    } else {
-                        // don't need to get rid of it, just empty it out
-                        // (getting rid of would screw up our indices maybe)
-                        // (we copy and drain )
-                        let cur_items: HashSet<Coord> = basins[cur_basin.unwrap()].drain().collect();
-                        basins[ngh_basin.unwrap()].extend(cur_items);
-                        //println!("...neighbor {:?} has a basin, we go from {} to {}", ngh, cur_basin.unwrap(), ngh_basin.unwrap());
-                        cur_basin = ngh_basin;
-                    }
-                }
-            }
-        }
-
-        for b in &basins {
-            if b.len() > 0 {
-                println!("Found basin of size {}: {:?}", b.len(), b);
-            }
-        }
+        let mut basins = color_grid(&self.vals, &mut four_neighbors);
+        basins = basins.into_iter().filter(|b| b.len() > 0).collect();
         basins.sort_by(|a, b| b.len().cmp(&a.len()));
+        for b in &basins {
+            println!("Found basin of size {}: {:?}", b.len(), b);
+        }
         let amt: i32 = basins.iter().take(3).fold(1, |tot, val| tot * val.len() as i32);
         return amt.to_string();
     }

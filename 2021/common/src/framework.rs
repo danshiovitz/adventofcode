@@ -67,7 +67,7 @@ where
 
 pub fn parse_grid<F, T>(input: &mut InputReader, parse_coord: &mut F) -> Grid<T>
 where
-    F: FnMut(char, &Coord) -> T,
+    F: FnMut(char, &Coord) -> Option<T>,
 {
     let mut coords: HashMap<Coord, T> = HashMap::new();
     let mut max_x = 0;
@@ -75,8 +75,10 @@ where
     for (y, line) in input.lines().enumerate() {
         for (x, ch) in line.unwrap().chars().enumerate() {
             let coord = Coord {x: x as i32, y: y as i32};
-            let val = parse_coord(ch, &coord);
-            coords.insert(coord, val);
+            match parse_coord(ch, &coord) {
+                Some(val) => { coords.insert(coord, val); },
+                None => {},
+            }
             max_x = x as i32;
         }
         max_y = y as i32;
