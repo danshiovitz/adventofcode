@@ -31,6 +31,19 @@ pub fn four_neighbors(coord: &Coord) -> Vec<Coord> {
     ];
 }
 
+pub fn eight_neighbors(coord: &Coord) -> Vec<Coord> {
+    return vec![
+        Coord { x: coord.x + 1, y: coord.y },
+        Coord { x: coord.x - 1, y: coord.y },
+        Coord { x: coord.x, y: coord.y + 1 },
+        Coord { x: coord.x, y: coord.y - 1},
+        Coord { x: coord.x + 1, y: coord.y + 1 },
+        Coord { x: coord.x + 1, y: coord.y - 1 },
+        Coord { x: coord.x - 1, y: coord.y + 1},
+        Coord { x: coord.x - 1, y: coord.y - 1},
+    ];
+}
+
 pub fn get_indirect_neighbors<F, T>(coord: Coord, grid: &Grid<T>, get_neighbors: &mut F) -> HashSet<Coord> where F: FnMut(&Coord) -> Vec<Coord> {
     let mut ret: HashSet<Coord> = HashSet::new();
 
@@ -64,4 +77,14 @@ pub fn color_grid<F, T>(grid: &Grid<T>, get_neighbors: &mut F) -> Vec<HashSet<Co
     }
 
     return groups;
+}
+
+pub fn print_grid<F, T>(grid: &Grid<T>, render_one: &mut F) -> () where F: FnMut(&Coord, &T) -> String {
+    for y in grid.min.y..=grid.max.y {
+        for x in grid.min.x..=grid.max.x {
+            let coord = Coord { x: x, y: y};
+            print!("{}", render_one(&coord, grid.coords.get(&coord).unwrap()));
+        }
+        println!();
+    }
 }
