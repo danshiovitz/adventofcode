@@ -21,7 +21,11 @@ where
 {
     let mut vals = Vec::new();
     for line in input.lines() {
-        vals.push(parse_line(line.unwrap()));
+        let line = line.unwrap();
+        if line.len() == 0 {
+            break;
+        }
+        vals.push(parse_line(line));
     }
     return vals;
 }

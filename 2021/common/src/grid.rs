@@ -79,11 +79,11 @@ pub fn color_grid<F, T>(grid: &Grid<T>, get_neighbors: &mut F) -> Vec<HashSet<Co
     return groups;
 }
 
-pub fn print_grid<F, T>(grid: &Grid<T>, render_one: &mut F) -> () where F: FnMut(&Coord, &T) -> String {
+pub fn print_grid<F, T>(grid: &Grid<T>, render_one: &mut F) -> () where F: FnMut(&Coord, Option<&T>) -> String {
     for y in grid.min.y..=grid.max.y {
         for x in grid.min.x..=grid.max.x {
             let coord = Coord { x: x, y: y};
-            print!("{}", render_one(&coord, grid.coords.get(&coord).unwrap()));
+            print!("{}", render_one(&coord, grid.coords.get(&coord)));
         }
         println!();
     }

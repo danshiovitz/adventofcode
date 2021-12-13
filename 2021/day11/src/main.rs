@@ -9,8 +9,9 @@ struct Day11 {
     vals: Grid<i32>,
 }
 
-fn print_one(_c: &Coord, val: &i32) -> String {
-    if *val > 9 {
+fn print_one(_c: &Coord, maybe_val: Option<&i32>) -> String {
+    let val = *maybe_val.unwrap();
+    if val > 9 {
         return "*".to_owned();
     }
     return val.to_string().to_owned();
