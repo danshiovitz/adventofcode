@@ -74,8 +74,8 @@ fn find_paths_dfs(cxns: &HashMap<String, Vec<String>>, start: &str, end: &str, a
         seen_mgr: seen_mgr,
     };
 
-    let paths = recurser.execute(state, &mut HashMap::new());
-    return paths.into_iter().map(|p| p.into_iter().map(|s| recurser.seen_mgr.translate_back(s)).collect()).collect();
+    let path_count = recurser.execute(state, &mut HashMap::new());
+    return (0..path_count).map(|_| vec!["start".to_owned(), "end".to_owned()]).collect();
 }
 
 #[derive(Clone, Hash, PartialEq, Eq)]
@@ -95,16 +95,16 @@ struct Recurser {
 }
 
 impl Recurser {
-    fn execute(&self, state: State, cache: &mut HashMap<State, Vec<Vec<Trid>>>) -> Vec<Vec<Trid>> {
+    fn execute(&self, state: State, cache: &mut HashMap<State, i32>) -> i32 {
         if state.step == self.end {
-            return vec![vec![state.step]];
+            return 1;
         }
 
         if let Some(found) = cache.get(&state) {
-            return found.clone();
+            return *found;
         }
 
-        let mut ret = Vec::new();
+        let mut ret = 0;
 
         let others = self.cxns.get(&state.step).unwrap();
         for other in others {
@@ -116,7 +116,7 @@ impl Recurser {
                         seen: state.seen,
                         used_extra: true,
                     };
-                    ret.extend(self.execute(new_state, cache));
+                    ret += self.execute(new_state, cache);
                 }
                 continue;
             }
@@ -130,14 +130,10 @@ impl Recurser {
             if !self.reusable.contains(&other) {
                 self.seen_mgr.set(&mut new_state.seen, other);
             }
-            ret.extend(self.execute(new_state, cache));
+            ret += self.execute(new_state, cache);
         }
 
-        for path in &mut ret {
-            path.insert(0, state.step.clone());
-        }
-
-        cache.insert(state, ret.clone());
+        cache.insert(state, ret);
 
         return ret;
     }
