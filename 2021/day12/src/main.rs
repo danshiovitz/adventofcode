@@ -5,11 +5,13 @@ use lazy_regex::regex;
 extern crate common;
 
 use common::framework::{parse_lines, run_day, BaseDay, InputReader};
+use common::solver::{FlagManager, FlagSet, Trid};
 
 struct Day12 {
     cxns: HashMap<String, Vec<String>>
 }
 
+#[allow(dead_code)]
 fn find_paths(cxns: &HashMap<String, Vec<String>>, start: &str, end: &str, allow_extra: bool) -> Vec<Vec<String>> {
     struct WorkItem {
         steps: Vec<String>,
@@ -51,6 +53,96 @@ fn find_paths(cxns: &HashMap<String, Vec<String>>, start: &str, end: &str, allow
     return completed;
 }
 
+fn find_paths_dfs(cxns: &HashMap<String, Vec<String>>, start: &str, end: &str, allow_extra: bool) -> Vec<Vec<String>> {
+    let seen_mgr = FlagManager::from(cxns.keys().map(|s| s.as_str()));
+
+    let start_id = seen_mgr.translate(start);
+    let end_id = seen_mgr.translate(end);
+
+    let mut state = State { step: start_id, seen: seen_mgr.init(), used_extra: false };
+    seen_mgr.set(&mut state.seen, start_id);
+
+    let trans_cxns = cxns.iter().map(|(k, v)| (seen_mgr.translate(k), v.iter().map(|s| seen_mgr.translate(s)).collect())).collect();
+
+    let reusable = cxns.keys().filter_map(|k| if !k.chars().next().unwrap().is_ascii_lowercase() { Some(seen_mgr.translate(k)) } else { None }).collect();
+    let recurser = Recurser {
+        cxns: trans_cxns,
+        start: start_id,
+        end: end_id,
+        reusable: reusable,
+        allow_extra: allow_extra,
+        seen_mgr: seen_mgr,
+    };
+
+    let paths = recurser.execute(state, &mut HashMap::new());
+    return paths.into_iter().map(|p| p.into_iter().map(|s| recurser.seen_mgr.translate_back(s)).collect()).collect();
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+struct State {
+    step: Trid,
+    seen: FlagSet,
+    used_extra: bool,
+}
+
+struct Recurser {
+    cxns: HashMap<Trid, Vec<Trid>>,
+    start: Trid,
+    end: Trid,
+    reusable: HashSet<Trid>,
+    allow_extra: bool,
+    seen_mgr: FlagManager,
+}
+
+impl Recurser {
+    fn execute(&self, state: State, cache: &mut HashMap<State, Vec<Vec<Trid>>>) -> Vec<Vec<Trid>> {
+        if state.step == self.end {
+            return vec![vec![state.step]];
+        }
+
+        if let Some(found) = cache.get(&state) {
+            return found.clone();
+        }
+
+        let mut ret = Vec::new();
+
+        let others = self.cxns.get(&state.step).unwrap();
+        for other in others {
+            let other = *other;
+            if self.seen_mgr.get(&state.seen, other) {
+                if other != self.start && !state.used_extra && self.allow_extra {
+                    let new_state = State {
+                        step: other,
+                        seen: state.seen,
+                        used_extra: true,
+                    };
+                    ret.extend(self.execute(new_state, cache));
+                }
+                continue;
+            }
+
+            let mut new_state = State {
+                step: other,
+                seen: state.seen,
+                used_extra: state.used_extra,
+            };
+
+            if !self.reusable.contains(&other) {
+                self.seen_mgr.set(&mut new_state.seen, other);
+            }
+            ret.extend(self.execute(new_state, cache));
+        }
+
+        for path in &mut ret {
+            path.insert(0, state.step.clone());
+        }
+
+        cache.insert(state, ret.clone());
+
+        return ret;
+    }
+}
+
 impl BaseDay for Day12 {
     fn parse(&mut self, input: &mut InputReader) {
         self.cxns = HashMap::new();
@@ -73,7 +165,7 @@ impl BaseDay for Day12 {
     }
 
     fn pt1(&mut self) -> String {
-        let paths = find_paths(&self.cxns, "start", "end", false);
+        let paths = find_paths_dfs(&self.cxns, "start", "end", false);
         // for p in &paths {
         //     println!("{:?}", p);
         // }
@@ -81,7 +173,7 @@ impl BaseDay for Day12 {
     }
 
     fn pt2(&mut self) -> String {
-        let paths = find_paths(&self.cxns, "start", "end", true);
+        let paths = find_paths_dfs(&self.cxns, "start", "end", true);
         // for p in &paths {
         //     println!("{:?}", p);
         // }
