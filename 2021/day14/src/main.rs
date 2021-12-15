@@ -1,11 +1,11 @@
 use std::collections::HashMap;
-use std::hash::Hash;
 
 use lazy_regex::regex;
 
 extern crate common;
 
 use common::framework::{parse_lines, run_day, BaseDay, InputReader};
+use common::utils::{inc_counter};
 
 struct Rule {
     pair: String,
@@ -15,14 +15,6 @@ struct Rule {
 struct Day14 {
     template: String,
     rules: HashMap<String, String>,
-}
-
-fn inc_counter<T>(counter: &mut HashMap<T, i64>, key: T, amount: i64) where T: Eq + Hash {
-    if let Some(val) = counter.get_mut(&key) {
-        *val += amount;
-    } else {
-        counter.insert(key, amount);
-    }
 }
 
 fn run_steps(template: &String, rules: &HashMap<String, String>, steps: i32, verbose: bool) -> i64 {

@@ -4,51 +4,30 @@ use std::collections::HashMap;
 extern crate common;
 
 use common::framework::{parse_lines, run_day, BaseDay, InputReader};
-
-#[derive(Debug)]
-struct Line {
-    start: (i32, i32),
-    end: (i32, i32),
-}
+use common::grid::{Coord, Line, get_unit_direction, add_direction};
+use common::utils::{inc_counter};
 
 struct Day05 {
     vals: Vec<Line>,
 }
 
 fn count_points(vals: &Vec<Line>, diag: bool) -> String {
-    let mut point_counts: HashMap<(i32, i32), i32> = HashMap::new();
+    let mut point_counts: HashMap<Coord, i32> = HashMap::new();
     for val in vals {
-        let mx = if val.start.0 < val.end.0 {
-            1
-        } else if val.start.0 > val.end.0 {
-            -1
-        } else {
-            0
-        };
-        let my = if val.start.1 < val.end.1 {
-            1
-        } else if val.start.1 > val.end.1 {
-            -1
-        } else {
-            0
-        };
+        let dir = get_unit_direction(&val.start, &val.end);
 
-        if !diag && mx != 0 && my != 0 {
+        if !diag && dir.dx != 0 && dir.dy != 0 {
             println!("Skipping: {:?}", val);
             continue;
         }
 
         let mut cur = val.start;
         loop {
-            if let Some(v) = point_counts.get_mut(&cur) {
-                *v += 1;
-            } else {
-                point_counts.insert(cur, 1);
-            }
+            inc_counter(&mut point_counts, cur, 1);
             if cur == val.end {
                 break;
             } else {
-                cur = (cur.0 + mx, cur.1 + my);
+                cur = add_direction(&cur, &dir);
             }
         }
     }
@@ -63,8 +42,8 @@ impl BaseDay for Day05 {
             match rex.captures(&line) {
                 Some(c) => {
                     return Line {
-                        start: (c[1].parse::<i32>().unwrap(), c[2].parse::<i32>().unwrap()),
-                        end: (c[3].parse::<i32>().unwrap(), c[4].parse::<i32>().unwrap()),
+                        start: Coord { x: c[1].parse::<i32>().unwrap(), y: c[2].parse::<i32>().unwrap() },
+                        end: Coord { x: c[3].parse::<i32>().unwrap(), y: c[4].parse::<i32>().unwrap() },
                     };
                 }
                 None => panic!("Bad line: {}", &line),

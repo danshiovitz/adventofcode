@@ -6,6 +6,18 @@ pub struct Coord {
     pub y: i32,
 }
 
+#[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
+pub struct Direction {
+    pub dx: i32,
+    pub dy: i32,
+}
+
+#[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
+pub struct Line {
+    pub start: Coord,
+    pub end: Coord,
+}
+
 pub struct Grid<T> {
     pub coords: HashMap<Coord, T>,
     pub min: Coord,
@@ -87,4 +99,28 @@ pub fn print_grid<F, T>(grid: &Grid<T>, render_one: &mut F) -> () where F: FnMut
         }
         println!();
     }
+}
+
+// This assumes angles are multiples of 45 degrees
+pub fn get_unit_direction(start: &Coord, end: &Coord) -> Direction {
+    let mx = if start.x < end.x {
+        1
+    } else if start.x > end.x {
+        -1
+    } else {
+        0
+    };
+    let my = if start.y < end.y {
+        1
+    } else if start.y > end.y {
+        -1
+    } else {
+        0
+    };
+
+    return Direction { dx: mx, dy: my };
+}
+
+pub fn add_direction(start: &Coord, dir: &Direction) -> Coord {
+    return Coord { x: start.x + dir.dx, y: start.y + dir.dy };
 }
