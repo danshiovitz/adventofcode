@@ -1,4 +1,5 @@
-use itertools::iproduct;
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 use std::collections::HashMap;
 
 extern crate common;
@@ -20,27 +21,53 @@ fn eff_risk(grid: &Grid<i32>, coord: Coord, mult: i32) -> Option<i32> {
     return grid.coords.get(&Coord {x: ex, y: ey}).map(|v| ((*v + rb - 1) % 9) + 1);
 }
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+struct State {
+    estimate: i32,
+    coord: Coord,
+}
+
+impl Ord for State {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.estimate.cmp(&self.estimate)
+            .then_with(|| self.coord.cmp(&other.coord))
+    }
+}
+
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 fn compute_costs(grid: &Grid<i32>, start: Coord, end: Coord, mult: i32) -> i32 {
-    let mut costs: HashMap<Coord, i32> = iproduct!(0..(grid.max.x + 1) * mult, 0..(grid.max.y + 1) * mult).map(|(x, y)| (Coord {x: x, y: y}, i32::MAX)).collect();
+    let mut costs: HashMap<Coord, i32> = HashMap::new();
+
+    let heuristic = |c: &Coord| -> i32 { (end.x - c.x) + (end.y - c.y) };
+
     costs.insert(start, 0);
-    let mut working = vec![start];
-    while !working.is_empty() {
-        let cur = working.remove(0);
-        let cur_cost = *costs.get(&cur).unwrap();
-        for ngh in four_neighbors(&cur) {
+    let mut working = BinaryHeap::new();
+    working.push(State { estimate: heuristic(&start), coord: start.clone() });
+    while let Some(cur) = working.pop() {
+        let cur_cost = *costs.get(&cur.coord).unwrap_or(&i32::MAX);
+        for ngh in four_neighbors(&cur.coord) {
             if let Some(ngh_risk) = eff_risk(&grid, ngh, mult) {
-                let existing_cost = *costs.get(&ngh).unwrap();
+                let existing_cost = *costs.get(&ngh).unwrap_or(&i32::MAX);
                 let via_cur_cost = cur_cost + ngh_risk;
                 if via_cur_cost < existing_cost {
+                    // heuristic never over-estimates, so we can return as soon as we
+                    // find the end
+                    if ngh == end {
+                        return via_cur_cost;
+                    }
                     // found a cheaper way to get to ngh, so have to recalc it
                     costs.insert(ngh, via_cur_cost);
-                    working.push(ngh);
+                    working.push(State { estimate: via_cur_cost + heuristic(&ngh), coord: ngh });
                 }
             }
         }
     }
-
-    return *costs.get(&end).unwrap();
+    panic!("Never found end?");
 }
 
 impl BaseDay for Day15 {

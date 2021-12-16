@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 common = { path = "../common", version = "0.1.0" }
-itertools = "0.10.2"
