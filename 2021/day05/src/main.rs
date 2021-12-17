@@ -4,8 +4,8 @@ use std::collections::HashMap;
 extern crate common;
 
 use common::framework::{parse_lines, run_day, BaseDay, InputReader};
-use common::grid::{Coord, Line, get_unit_direction, add_direction};
-use common::utils::{inc_counter};
+use common::grid::{add_direction, get_unit_direction, Coord, Line};
+use common::utils::inc_counter;
 
 struct Day05 {
     vals: Vec<Line>,
@@ -42,8 +42,14 @@ impl BaseDay for Day05 {
             match rex.captures(&line) {
                 Some(c) => {
                     return Line {
-                        start: Coord { x: c[1].parse::<i32>().unwrap(), y: c[2].parse::<i32>().unwrap() },
-                        end: Coord { x: c[3].parse::<i32>().unwrap(), y: c[4].parse::<i32>().unwrap() },
+                        start: Coord {
+                            x: c[1].parse::<i32>().unwrap(),
+                            y: c[2].parse::<i32>().unwrap(),
+                        },
+                        end: Coord {
+                            x: c[3].parse::<i32>().unwrap(),
+                            y: c[4].parse::<i32>().unwrap(),
+                        },
                     };
                 }
                 None => panic!("Bad line: {}", &line),

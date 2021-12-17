@@ -3,7 +3,7 @@ use std::collections::HashSet;
 extern crate common;
 
 use common::framework::{parse_grid, run_day, BaseDay, InputReader};
-use common::grid::{Coord, Grid, eight_neighbors, print_grid};
+use common::grid::{eight_neighbors, print_grid, Coord, Grid};
 
 struct Day11 {
     vals: Grid<i32>,
@@ -60,7 +60,9 @@ fn run_flashes(grid: &Grid<i32>, pt1: bool, verbose: bool) -> i32 {
 
         if verbose {
             let grid_copy = Grid {
-                min: grid.min, max: grid.max, coords: cur_grid.clone(),
+                min: grid.min,
+                max: grid.max,
+                coords: cur_grid.clone(),
             };
             println!("Step {}", step + 1);
             print_grid(&grid_copy, &mut print_one);

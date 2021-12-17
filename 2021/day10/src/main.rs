@@ -9,19 +9,19 @@ struct Day10 {
 }
 
 fn check_line(line: &str) -> (Option<char>, Vec<char>) {
-    let pairs = vec![
-        ('(', ')'),
-        ('[', ']'),
-        ('{', '}'),
-        ('<', '>'),
-    ];
+    let pairs = vec![('(', ')'), ('[', ']'), ('{', '}'), ('<', '>')];
 
     let mut stack = Vec::new();
     for c in line.chars() {
         if pairs.iter().any(|p| p.0 == c) {
             stack.push(c);
         } else {
-            let o = pairs.iter().filter(|p| p.1 == c).map(|p| p.0).next().unwrap();
+            let o = pairs
+                .iter()
+                .filter(|p| p.1 == c)
+                .map(|p| p.0)
+                .next()
+                .unwrap();
             if stack.len() > 0 && stack[stack.len() - 1] == o {
                 stack.pop();
             } else {
@@ -33,12 +33,7 @@ fn check_line(line: &str) -> (Option<char>, Vec<char>) {
 }
 
 fn score_corrupt_lines(line: &str) -> i64 {
-    let scores = HashMap::from([
-        (')', 3),
-        (']', 57),
-        ('}', 1197),
-        ('>', 25137),
-    ]);
+    let scores = HashMap::from([(')', 3), (']', 57), ('}', 1197), ('>', 25137)]);
 
     let (bad_char, _remaining) = check_line(line);
     return match bad_char {
@@ -48,19 +43,16 @@ fn score_corrupt_lines(line: &str) -> i64 {
 }
 
 fn score_incomplete_lines(line: &str) -> i64 {
-    let scores = HashMap::from([
-        ('(', 1),
-        ('[', 2),
-        ('{', 3),
-        ('<', 4),
-    ]);
+    let scores = HashMap::from([('(', 1), ('[', 2), ('{', 3), ('<', 4)]);
 
     let (bad_char, mut remaining) = check_line(line);
     if bad_char.is_some() {
         return 0;
     }
     remaining.reverse();
-    return remaining.into_iter().fold(0, |tot, c| 5 * tot + *scores.get(&c).unwrap());
+    return remaining
+        .into_iter()
+        .fold(0, |tot, c| 5 * tot + *scores.get(&c).unwrap());
 }
 
 impl BaseDay for Day10 {
@@ -74,7 +66,12 @@ impl BaseDay for Day10 {
     }
 
     fn pt2(&mut self) -> String {
-        let mut scores: Vec<i64> = self.vals.iter().map(|ln| score_incomplete_lines(ln)).filter(|s| *s != 0).collect();
+        let mut scores: Vec<i64> = self
+            .vals
+            .iter()
+            .map(|ln| score_incomplete_lines(ln))
+            .filter(|s| *s != 0)
+            .collect();
         println!("scores: {:?}", scores);
         scores.sort();
         let tot = scores[scores.len() / 2];

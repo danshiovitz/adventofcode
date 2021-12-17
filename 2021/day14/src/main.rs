@@ -5,7 +5,7 @@ use lazy_regex::regex;
 extern crate common;
 
 use common::framework::{parse_lines, run_day, BaseDay, InputReader};
-use common::utils::{inc_counter};
+use common::utils::inc_counter;
 
 struct Rule {
     pair: String,
@@ -20,7 +20,7 @@ struct Day14 {
 fn run_steps(template: &String, rules: &HashMap<String, String>, steps: i32, verbose: bool) -> i64 {
     let mut pairs: HashMap<String, i64> = HashMap::new();
     for idx in 0..template.len() - 1 {
-        let seg = template[idx..idx+2].to_owned();
+        let seg = template[idx..idx + 2].to_owned();
         inc_counter(&mut pairs, seg, 1);
     }
 
@@ -50,7 +50,7 @@ fn run_steps(template: &String, rules: &HashMap<String, String>, steps: i32, ver
 
     // Fix the double-counts (first and last char are not double-counted):
     let first_e = template[0..1].to_owned();
-    let last_e = template[template.len() - 1 .. template.len()].to_owned();
+    let last_e = template[template.len() - 1..template.len()].to_owned();
     inc_counter(&mut quantities, first_e.clone(), -1);
     inc_counter(&mut quantities, last_e.clone(), -1);
     for count in quantities.values_mut() {
@@ -71,14 +71,23 @@ fn run_steps(template: &String, rules: &HashMap<String, String>, steps: i32, ver
 impl BaseDay for Day14 {
     fn parse(&mut self, input: &mut InputReader) {
         let mut parse_template = |line: String| -> String { line };
-        self.template = parse_lines(input, &mut parse_template).into_iter().next().unwrap();
+        self.template = parse_lines(input, &mut parse_template)
+            .into_iter()
+            .next()
+            .unwrap();
 
         let mut parse_rule = |line: String| -> Rule {
             let sep = regex!(r#"\s*->\s*"#);
             let pieces: Vec<&str> = sep.split(&line).collect();
-            return Rule { pair: pieces[0].to_owned(), insert: pieces[1].to_owned() };
+            return Rule {
+                pair: pieces[0].to_owned(),
+                insert: pieces[1].to_owned(),
+            };
         };
-        self.rules = parse_lines(input, &mut parse_rule).into_iter().map(|r| (r.pair, r.insert)).collect();
+        self.rules = parse_lines(input, &mut parse_rule)
+            .into_iter()
+            .map(|r| (r.pair, r.insert))
+            .collect();
     }
 
     fn pt1(&mut self) -> String {
@@ -93,6 +102,9 @@ impl BaseDay for Day14 {
 }
 
 fn main() {
-    let mut day = Day14 { template: "".to_string(), rules: HashMap::new() };
+    let mut day = Day14 {
+        template: "".to_string(),
+        rules: HashMap::new(),
+    };
     run_day(&mut day);
 }

@@ -31,17 +31,26 @@ fn solve_entry(entry: &Entry) -> i32 {
 
     let segs_bd: HashSet<char> = four.difference(one).map(|c| *c).collect::<HashSet<char>>();
 
-    let five: &HashSet<char> = find_match(&mut |p| p.len() == 5 && p.intersection(&segs_bd).count() == 2);
-    let three: &HashSet<char> = find_match(&mut |p| p.len() == 5 && p.intersection(&one).count() == 2);
+    let five: &HashSet<char> =
+        find_match(&mut |p| p.len() == 5 && p.intersection(&segs_bd).count() == 2);
+    let three: &HashSet<char> =
+        find_match(&mut |p| p.len() == 5 && p.intersection(&one).count() == 2);
     let two: &HashSet<char> = find_match(&mut |p| p.len() == 5 && p != five && p != three);
 
-    let zero: &HashSet<char> = find_match(&mut |p| p.len() == 6 && p.intersection(&five).count() == 4);
-    let nine: &HashSet<char> = find_match(&mut |p| p.len() == 6 && p != zero && p.intersection(&one).count() == 2);
-    let six: &HashSet<char> = find_match(&mut |p| p.len() == 6 && p.intersection(&one).count() == 1);
+    let zero: &HashSet<char> =
+        find_match(&mut |p| p.len() == 6 && p.intersection(&five).count() == 4);
+    let nine: &HashSet<char> =
+        find_match(&mut |p| p.len() == 6 && p != zero && p.intersection(&one).count() == 2);
+    let six: &HashSet<char> =
+        find_match(&mut |p| p.len() == 6 && p.intersection(&one).count() == 1);
 
     let digits = vec![zero, one, two, three, four, five, six, seven, eight, nine];
     let to_val = |d| digits.iter().position(|p| *p == d).unwrap() as i32;
-    let s = entry.output.iter().map(|d| to_val(d)).fold(0, |tot, val| tot * 10 + val);
+    let s = entry
+        .output
+        .iter()
+        .map(|d| to_val(d))
+        .fold(0, |tot, val| tot * 10 + val);
     // println!("Val: {}", s);
     return s;
 }
@@ -52,18 +61,35 @@ impl BaseDay for Day08 {
             let sep = regex!(r#"\s*\|\s*"#);
             let pieces = sep.split(&line).collect::<Vec<&str>>();
             let fix = |s: &str| s.chars().collect::<HashSet<char>>();
-            return Entry { patterns: pieces[0].split(" ").map(|s| fix(s)).collect(), output: pieces[1].split(" ").map(|s| fix(s)).collect() };
+            return Entry {
+                patterns: pieces[0].split(" ").map(|s| fix(s)).collect(),
+                output: pieces[1].split(" ").map(|s| fix(s)).collect(),
+            };
         }
         self.vals = parse_lines(input, &mut parse_line);
     }
 
     fn pt1(&mut self) -> String {
-        let tot: i32 = self.vals.iter().map(|e| e.output.iter().filter(|p| p.len() <= 4 || p.len() == 7).count() as i32).sum();
+        let tot: i32 = self
+            .vals
+            .iter()
+            .map(|e| {
+                e.output
+                    .iter()
+                    .filter(|p| p.len() <= 4 || p.len() == 7)
+                    .count() as i32
+            })
+            .sum();
         return tot.to_string();
     }
 
     fn pt2(&mut self) -> String {
-        return self.vals.iter().map(|e| solve_entry(&e)).sum::<i32>().to_string();
+        return self
+            .vals
+            .iter()
+            .map(|e| solve_entry(&e))
+            .sum::<i32>()
+            .to_string();
     }
 }
 

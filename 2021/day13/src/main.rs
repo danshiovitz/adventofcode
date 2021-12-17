@@ -5,7 +5,7 @@ use lazy_regex::regex;
 extern crate common;
 
 use common::framework::{parse_lines, run_day, BaseDay, InputReader};
-use common::grid::{Coord, Grid, print_grid};
+use common::grid::{print_grid, Coord, Grid};
 
 #[derive(Copy, Clone)]
 enum Fold {
@@ -29,7 +29,11 @@ fn print_one(_c: &Coord, maybe_val: Option<&i32>) -> String {
 fn print_points(points: &HashSet<Coord>) {
     let max_x = points.iter().map(|p| p.x).max().unwrap();
     let max_y = points.iter().map(|p| p.y).max().unwrap();
-    let grid = Grid { min: Coord { x: 0, y: 0 }, max: Coord { x: max_x, y: max_y }, coords: points.iter().map(|p| (*p, 1)).collect() };
+    let grid = Grid {
+        min: Coord { x: 0, y: 0 },
+        max: Coord { x: max_x, y: max_y },
+        coords: points.iter().map(|p| (*p, 1)).collect(),
+    };
     print_grid(&grid, &mut print_one);
 }
 
@@ -39,20 +43,32 @@ fn fold_points(points: &HashSet<Coord>, fold: Fold) -> HashSet<Coord> {
         match fold {
             Fold::X(x) => {
                 if point.x > x {
-                    let new_x = 2*x - point.x;
-                    ret.insert(Coord { x: new_x, y: point.y });
+                    let new_x = 2 * x - point.x;
+                    ret.insert(Coord {
+                        x: new_x,
+                        y: point.y,
+                    });
                 } else {
-                    ret.insert(Coord { x: point.x, y: point.y });
+                    ret.insert(Coord {
+                        x: point.x,
+                        y: point.y,
+                    });
                 }
-            },
+            }
             Fold::Y(y) => {
                 if point.y > y {
-                    let new_y = 2*y - point.y;
-                    ret.insert(Coord { x: point.x, y: new_y });
+                    let new_y = 2 * y - point.y;
+                    ret.insert(Coord {
+                        x: point.x,
+                        y: new_y,
+                    });
                 } else {
-                    ret.insert(Coord { x: point.x, y: point.y });
+                    ret.insert(Coord {
+                        x: point.x,
+                        y: point.y,
+                    });
                 }
-            },
+            }
         }
     }
     return ret;
@@ -63,7 +79,10 @@ impl BaseDay for Day13 {
         let mut parse_coord = |line: String| -> Coord {
             let sep = regex!(r#"\s*,\s*"#);
             let pieces: Vec<&str> = sep.split(&line).collect();
-            return Coord { x: pieces[0].parse::<i32>().unwrap(), y: pieces[1].parse::<i32>().unwrap(), };
+            return Coord {
+                x: pieces[0].parse::<i32>().unwrap(),
+                y: pieces[1].parse::<i32>().unwrap(),
+            };
         };
 
         let mut parse_fold = |line: String| -> Fold {
@@ -102,6 +121,9 @@ impl BaseDay for Day13 {
 }
 
 fn main() {
-    let mut day = Day13 { points: HashSet::new(), folds: Vec::new() };
+    let mut day = Day13 {
+        points: HashSet::new(),
+        folds: Vec::new(),
+    };
     run_day(&mut day);
 }

@@ -8,11 +8,16 @@ use common::framework::{parse_lines, run_day, BaseDay, InputReader};
 use common::solver::{FlagManager, FlagSet, Trid};
 
 struct Day12 {
-    cxns: HashMap<String, Vec<String>>
+    cxns: HashMap<String, Vec<String>>,
 }
 
 #[allow(dead_code)]
-fn find_paths(cxns: &HashMap<String, Vec<String>>, start: &str, end: &str, allow_extra: bool) -> Vec<Vec<String>> {
+fn find_paths(
+    cxns: &HashMap<String, Vec<String>>,
+    start: &str,
+    end: &str,
+    allow_extra: bool,
+) -> Vec<Vec<String>> {
     struct WorkItem {
         steps: Vec<String>,
         seen: HashSet<String>,
@@ -20,7 +25,11 @@ fn find_paths(cxns: &HashMap<String, Vec<String>>, start: &str, end: &str, allow
     }
 
     let mut completed = Vec::new();
-    let mut working = vec![ WorkItem { steps: vec![start.to_owned()], seen: HashSet::from([start.to_owned()]), extra: None } ];
+    let mut working = vec![WorkItem {
+        steps: vec![start.to_owned()],
+        seen: HashSet::from([start.to_owned()]),
+        extra: None,
+    }];
     while !working.is_empty() {
         let cur = working.remove(0);
         let cur_step = &cur.steps[cur.steps.len() - 1];
@@ -35,7 +44,15 @@ fn find_paths(cxns: &HashMap<String, Vec<String>>, start: &str, end: &str, allow
                 }
             }
 
-            let mut other_item = WorkItem { steps: cur.steps.clone(), seen: cur.seen.clone(), extra: if use_extra { Some(other.clone()) } else { cur.extra.clone() } };
+            let mut other_item = WorkItem {
+                steps: cur.steps.clone(),
+                seen: cur.seen.clone(),
+                extra: if use_extra {
+                    Some(other.clone())
+                } else {
+                    cur.extra.clone()
+                },
+            };
             other_item.steps.push(other.clone());
 
             if other == end {
@@ -53,18 +70,44 @@ fn find_paths(cxns: &HashMap<String, Vec<String>>, start: &str, end: &str, allow
     return completed;
 }
 
-fn find_paths_dfs(cxns: &HashMap<String, Vec<String>>, start: &str, end: &str, allow_extra: bool) -> Vec<Vec<String>> {
+fn find_paths_dfs(
+    cxns: &HashMap<String, Vec<String>>,
+    start: &str,
+    end: &str,
+    allow_extra: bool,
+) -> Vec<Vec<String>> {
     let seen_mgr = FlagManager::from(cxns.keys().map(|s| s.as_str()));
 
     let start_id = seen_mgr.translate(start);
     let end_id = seen_mgr.translate(end);
 
-    let mut state = State { step: start_id, seen: seen_mgr.init(), used_extra: false };
+    let mut state = State {
+        step: start_id,
+        seen: seen_mgr.init(),
+        used_extra: false,
+    };
     seen_mgr.set(&mut state.seen, start_id);
 
-    let trans_cxns = cxns.iter().map(|(k, v)| (seen_mgr.translate(k), v.iter().map(|s| seen_mgr.translate(s)).collect())).collect();
+    let trans_cxns = cxns
+        .iter()
+        .map(|(k, v)| {
+            (
+                seen_mgr.translate(k),
+                v.iter().map(|s| seen_mgr.translate(s)).collect(),
+            )
+        })
+        .collect();
 
-    let reusable = cxns.keys().filter_map(|k| if !k.chars().next().unwrap().is_ascii_lowercase() { Some(seen_mgr.translate(k)) } else { None }).collect();
+    let reusable = cxns
+        .keys()
+        .filter_map(|k| {
+            if !k.chars().next().unwrap().is_ascii_lowercase() {
+                Some(seen_mgr.translate(k))
+            } else {
+                None
+            }
+        })
+        .collect();
     let recurser = Recurser {
         cxns: trans_cxns,
         start: start_id,
@@ -75,7 +118,9 @@ fn find_paths_dfs(cxns: &HashMap<String, Vec<String>>, start: &str, end: &str, a
     };
 
     let path_count = recurser.execute(state, &mut HashMap::new());
-    return (0..path_count).map(|_| vec!["start".to_owned(), "end".to_owned()]).collect();
+    return (0..path_count)
+        .map(|_| vec!["start".to_owned(), "end".to_owned()])
+        .collect();
 }
 
 #[derive(Clone, Hash, PartialEq, Eq)]
@@ -148,12 +193,14 @@ impl BaseDay for Day12 {
             if let Some(pps) = self.cxns.get_mut(pieces[0]) {
                 pps.push(pieces[1].to_owned());
             } else {
-                self.cxns.insert(pieces[0].to_owned(), vec![ pieces[1].to_owned() ]);
+                self.cxns
+                    .insert(pieces[0].to_owned(), vec![pieces[1].to_owned()]);
             }
             if let Some(pps) = self.cxns.get_mut(pieces[1]) {
                 pps.push(pieces[0].to_owned());
             } else {
-                self.cxns.insert(pieces[1].to_owned(), vec![ pieces[0].to_owned() ]);
+                self.cxns
+                    .insert(pieces[1].to_owned(), vec![pieces[0].to_owned()]);
             }
             return true;
         };
@@ -178,6 +225,8 @@ impl BaseDay for Day12 {
 }
 
 fn main() {
-    let mut day = Day12 { cxns: HashMap::new() };
+    let mut day = Day12 {
+        cxns: HashMap::new(),
+    };
     run_day(&mut day);
 }

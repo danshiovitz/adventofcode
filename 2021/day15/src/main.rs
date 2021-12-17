@@ -5,20 +5,27 @@ use std::collections::HashMap;
 extern crate common;
 
 use common::framework::{parse_grid, run_day, BaseDay, InputReader};
-use common::grid::{Coord, Grid, four_neighbors};
+use common::grid::{four_neighbors, Coord, Grid};
 
 struct Day15 {
     vals: Grid<i32>,
 }
 
 fn eff_risk(grid: &Grid<i32>, coord: Coord, mult: i32) -> Option<i32> {
-    if coord.x >= (grid.max.x + 1) * mult || coord.x < 0 || coord.y >= (grid.max.y + 1) * mult || coord.y < 0 {
+    if coord.x >= (grid.max.x + 1) * mult
+        || coord.x < 0
+        || coord.y >= (grid.max.y + 1) * mult
+        || coord.y < 0
+    {
         return None;
     }
     let ex = coord.x % (grid.max.x + 1);
     let ey = coord.y % (grid.max.y + 1);
     let rb = coord.x / (grid.max.x + 1) + coord.y / (grid.max.y + 1);
-    return grid.coords.get(&Coord {x: ex, y: ey}).map(|v| ((*v + rb - 1) % 9) + 1);
+    return grid
+        .coords
+        .get(&Coord { x: ex, y: ey })
+        .map(|v| ((*v + rb - 1) % 9) + 1);
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -29,7 +36,9 @@ struct State {
 
 impl Ord for State {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.estimate.cmp(&self.estimate)
+        other
+            .estimate
+            .cmp(&self.estimate)
             .then_with(|| self.coord.cmp(&other.coord))
     }
 }
@@ -47,7 +56,10 @@ fn compute_costs(grid: &Grid<i32>, start: Coord, end: Coord, mult: i32) -> i32 {
 
     costs.insert(start, 0);
     let mut working = BinaryHeap::new();
-    working.push(State { estimate: heuristic(&start), coord: start.clone() });
+    working.push(State {
+        estimate: heuristic(&start),
+        coord: start.clone(),
+    });
     while let Some(cur) = working.pop() {
         let cur_cost = *costs.get(&cur.coord).unwrap_or(&i32::MAX);
         for ngh in four_neighbors(&cur.coord) {
@@ -62,7 +74,10 @@ fn compute_costs(grid: &Grid<i32>, start: Coord, end: Coord, mult: i32) -> i32 {
                     }
                     // found a cheaper way to get to ngh, so have to recalc it
                     costs.insert(ngh, via_cur_cost);
-                    working.push(State { estimate: via_cur_cost + heuristic(&ngh), coord: ngh });
+                    working.push(State {
+                        estimate: via_cur_cost + heuristic(&ngh),
+                        coord: ngh,
+                    });
                 }
             }
         }
@@ -86,7 +101,10 @@ impl BaseDay for Day15 {
     }
 
     fn pt2(&mut self) -> String {
-        let eff_max = Coord { x: (self.vals.max.x + 1) * 5 - 1, y: (self.vals.max.y + 1) * 5 - 1};
+        let eff_max = Coord {
+            x: (self.vals.max.x + 1) * 5 - 1,
+            y: (self.vals.max.y + 1) * 5 - 1,
+        };
         let cost = compute_costs(&self.vals, self.vals.min, eff_max, 5);
         return cost.to_string();
     }

@@ -78,18 +78,26 @@ where
     let mut max_y = 0;
     for (y, line) in input.lines().enumerate() {
         for (x, ch) in line.unwrap().chars().enumerate() {
-            let coord = Coord {x: x as i32, y: y as i32};
+            let coord = Coord {
+                x: x as i32,
+                y: y as i32,
+            };
             match parse_coord(ch, &coord) {
-                Some(val) => { coords.insert(coord, val); },
-                None => {},
+                Some(val) => {
+                    coords.insert(coord, val);
+                }
+                None => {}
             }
             max_x = x as i32;
         }
         max_y = y as i32;
     }
-    return Grid::<T> { coords: coords, min: Coord {x: 0, y: 0}, max: Coord {x: max_x, y: max_y}};
+    return Grid::<T> {
+        coords: coords,
+        min: Coord { x: 0, y: 0 },
+        max: Coord { x: max_x, y: max_y },
+    };
 }
-
 
 fn load_expected(fname: &str) -> Vec<String> {
     let mut expected = Vec::new();

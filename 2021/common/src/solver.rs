@@ -8,8 +8,14 @@ pub struct FlagManager {
 }
 
 impl FlagManager {
-    pub fn from<'a, I: Iterator<Item = &'a str>>(names: I) -> FlagManager where I: IntoIterator<Item = &'a str> {
-        let name_map = names.enumerate().map(|(idx, n)| (n.to_owned(), idx)).collect();
+    pub fn from<'a, I: Iterator<Item = &'a str>>(names: I) -> FlagManager
+    where
+        I: IntoIterator<Item = &'a str>,
+    {
+        let name_map = names
+            .enumerate()
+            .map(|(idx, n)| (n.to_owned(), idx))
+            .collect();
         return FlagManager { names: name_map };
     }
 
@@ -43,6 +49,11 @@ impl FlagManager {
     }
 
     pub fn translate_back(&self, idx: Trid) -> String {
-        return self.names.iter().filter_map(|(k, v)| if idx == *v { Some(k.clone()) } else { None }).next().unwrap();
+        return self
+            .names
+            .iter()
+            .filter_map(|(k, v)| if idx == *v { Some(k.clone()) } else { None })
+            .next()
+            .unwrap();
     }
 }

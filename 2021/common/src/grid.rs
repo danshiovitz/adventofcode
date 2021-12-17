@@ -28,35 +28,78 @@ impl<T> Grid<T> {
     pub fn new() -> Self {
         Grid {
             coords: HashMap::new(),
-            min: Coord {x: 0, y: 0},
-            max: Coord {x: 0, y: 0},
+            min: Coord { x: 0, y: 0 },
+            max: Coord { x: 0, y: 0 },
         }
     }
 }
 
 pub fn four_neighbors(coord: &Coord) -> Vec<Coord> {
     return vec![
-        Coord { x: coord.x + 1, y: coord.y },
-        Coord { x: coord.x - 1, y: coord.y },
-        Coord { x: coord.x, y: coord.y + 1 },
-        Coord { x: coord.x, y: coord.y - 1},
+        Coord {
+            x: coord.x + 1,
+            y: coord.y,
+        },
+        Coord {
+            x: coord.x - 1,
+            y: coord.y,
+        },
+        Coord {
+            x: coord.x,
+            y: coord.y + 1,
+        },
+        Coord {
+            x: coord.x,
+            y: coord.y - 1,
+        },
     ];
 }
 
 pub fn eight_neighbors(coord: &Coord) -> Vec<Coord> {
     return vec![
-        Coord { x: coord.x + 1, y: coord.y },
-        Coord { x: coord.x - 1, y: coord.y },
-        Coord { x: coord.x, y: coord.y + 1 },
-        Coord { x: coord.x, y: coord.y - 1},
-        Coord { x: coord.x + 1, y: coord.y + 1 },
-        Coord { x: coord.x + 1, y: coord.y - 1 },
-        Coord { x: coord.x - 1, y: coord.y + 1},
-        Coord { x: coord.x - 1, y: coord.y - 1},
+        Coord {
+            x: coord.x + 1,
+            y: coord.y,
+        },
+        Coord {
+            x: coord.x - 1,
+            y: coord.y,
+        },
+        Coord {
+            x: coord.x,
+            y: coord.y + 1,
+        },
+        Coord {
+            x: coord.x,
+            y: coord.y - 1,
+        },
+        Coord {
+            x: coord.x + 1,
+            y: coord.y + 1,
+        },
+        Coord {
+            x: coord.x + 1,
+            y: coord.y - 1,
+        },
+        Coord {
+            x: coord.x - 1,
+            y: coord.y + 1,
+        },
+        Coord {
+            x: coord.x - 1,
+            y: coord.y - 1,
+        },
     ];
 }
 
-pub fn get_indirect_neighbors<F, T>(coord: Coord, grid: &Grid<T>, get_neighbors: &mut F) -> HashSet<Coord> where F: FnMut(&Coord) -> Vec<Coord> {
+pub fn get_indirect_neighbors<F, T>(
+    coord: Coord,
+    grid: &Grid<T>,
+    get_neighbors: &mut F,
+) -> HashSet<Coord>
+where
+    F: FnMut(&Coord) -> Vec<Coord>,
+{
     let mut ret: HashSet<Coord> = HashSet::new();
 
     let mut working = HashSet::new();
@@ -77,7 +120,10 @@ pub fn get_indirect_neighbors<F, T>(coord: Coord, grid: &Grid<T>, get_neighbors:
     return ret;
 }
 
-pub fn color_grid<F, T>(grid: &Grid<T>, get_neighbors: &mut F) -> Vec<HashSet<Coord>> where F: FnMut(&Coord) -> Vec<Coord> {
+pub fn color_grid<F, T>(grid: &Grid<T>, get_neighbors: &mut F) -> Vec<HashSet<Coord>>
+where
+    F: FnMut(&Coord) -> Vec<Coord>,
+{
     let mut unassigned: HashSet<Coord> = grid.coords.keys().map(|c| *c).collect();
     let mut groups: Vec<HashSet<Coord>> = vec![];
 
@@ -91,10 +137,13 @@ pub fn color_grid<F, T>(grid: &Grid<T>, get_neighbors: &mut F) -> Vec<HashSet<Co
     return groups;
 }
 
-pub fn print_grid<F, T>(grid: &Grid<T>, render_one: &mut F) -> () where F: FnMut(&Coord, Option<&T>) -> String {
+pub fn print_grid<F, T>(grid: &Grid<T>, render_one: &mut F) -> ()
+where
+    F: FnMut(&Coord, Option<&T>) -> String,
+{
     for y in grid.min.y..=grid.max.y {
         for x in grid.min.x..=grid.max.x {
-            let coord = Coord { x: x, y: y};
+            let coord = Coord { x: x, y: y };
             print!("{}", render_one(&coord, grid.coords.get(&coord)));
         }
         println!();
@@ -122,5 +171,8 @@ pub fn get_unit_direction(start: &Coord, end: &Coord) -> Direction {
 }
 
 pub fn add_direction(start: &Coord, dir: &Direction) -> Coord {
-    return Coord { x: start.x + dir.dx, y: start.y + dir.dy };
+    return Coord {
+        x: start.x + dir.dx,
+        y: start.y + dir.dy,
+    };
 }

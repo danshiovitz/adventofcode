@@ -1,7 +1,7 @@
 extern crate common;
 
 use common::framework::{parse_grid, run_day, BaseDay, InputReader};
-use common::grid::{Coord, Grid, color_grid, four_neighbors};
+use common::grid::{color_grid, four_neighbors, Coord, Grid};
 
 struct Day09 {
     vals: Grid<i32>,
@@ -28,7 +28,10 @@ impl BaseDay for Day09 {
     fn pt1(&mut self) -> String {
         let mut risk = 0;
         for (coord, val) in self.vals.coords.iter() {
-            if four_neighbors(coord).iter().all(|n| is_lower(coord, n, &self.vals)) {
+            if four_neighbors(coord)
+                .iter()
+                .all(|n| is_lower(coord, n, &self.vals))
+            {
                 risk += 1 + val;
             }
         }
@@ -42,7 +45,10 @@ impl BaseDay for Day09 {
         for b in &basins {
             println!("Found basin of size {}: {:?}", b.len(), b);
         }
-        let amt: i32 = basins.iter().take(3).fold(1, |tot, val| tot * val.len() as i32);
+        let amt: i32 = basins
+            .iter()
+            .take(3)
+            .fold(1, |tot, val| tot * val.len() as i32);
         return amt.to_string();
     }
 }

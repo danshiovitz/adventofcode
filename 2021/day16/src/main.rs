@@ -18,7 +18,7 @@ enum OperatorType {
 
 enum Packet {
     Literal(i32, i64),
-    Operator(i32, OperatorType, Vec<Box<Packet>>)
+    Operator(i32, OperatorType, Vec<Box<Packet>>),
 }
 
 struct Day16 {
@@ -48,7 +48,11 @@ fn hex_to_bin(c: char) -> &'static str {
 }
 
 fn parse_packet(line: String) -> Packet {
-    let mut bits = line.chars().map(|c| hex_to_bin(c)).collect::<Vec<&str>>().join("");
+    let mut bits = line
+        .chars()
+        .map(|c| hex_to_bin(c))
+        .collect::<Vec<&str>>()
+        .join("");
     return parse_single_packet(&mut bits);
 }
 
@@ -109,9 +113,12 @@ fn print_packet(packet: &Packet, indent: usize) {
     match packet {
         Packet::Literal(version, value) => {
             println!("{}A literal (v. {}): {}", indent_str, version, value);
-        },
+        }
         Packet::Operator(version, optype, packets) => {
-            println!("{}An operator (v. {}) of type {:?}:", indent_str, version, optype);
+            println!(
+                "{}An operator (v. {}) of type {:?}:",
+                indent_str, version, optype
+            );
             for nested in packets {
                 print_packet(&nested, indent + 2);
             }
@@ -121,16 +128,16 @@ fn print_packet(packet: &Packet, indent: usize) {
 
 fn sum_versions(packet: &Packet) -> i32 {
     return match packet {
-        Packet::Literal(version, _value) => { *version },
+        Packet::Literal(version, _value) => *version,
         Packet::Operator(version, _optype, packets) => {
             *version + packets.iter().map(|n| sum_versions(n)).sum::<i32>()
         }
-    }
+    };
 }
 
 fn eval_packet(packet: &Packet) -> i64 {
     return match packet {
-        Packet::Literal(_version, value) => { *value },
+        Packet::Literal(_version, value) => *value,
         Packet::Operator(_version, optype, packets) => {
             let nested = packets.iter().map(|n| eval_packet(n)).collect::<Vec<i64>>();
             match optype {
@@ -138,12 +145,30 @@ fn eval_packet(packet: &Packet) -> i64 {
                 OperatorType::Product => nested.into_iter().product::<i64>(),
                 OperatorType::Minimum => nested.into_iter().min().unwrap(),
                 OperatorType::Maximum => nested.into_iter().max().unwrap(),
-                OperatorType::GreaterThan => { if nested[0] > nested[1] { 1 } else { 0 } },
-                OperatorType::LessThan => { if nested[0] < nested[1] { 1 } else { 0 } },
-                OperatorType::EqualTo => { if nested[0] == nested[1] { 1 } else { 0 } },
+                OperatorType::GreaterThan => {
+                    if nested[0] > nested[1] {
+                        1
+                    } else {
+                        0
+                    }
+                }
+                OperatorType::LessThan => {
+                    if nested[0] < nested[1] {
+                        1
+                    } else {
+                        0
+                    }
+                }
+                OperatorType::EqualTo => {
+                    if nested[0] == nested[1] {
+                        1
+                    } else {
+                        0
+                    }
+                }
             }
         }
-    }
+    };
 }
 
 impl BaseDay for Day16 {
