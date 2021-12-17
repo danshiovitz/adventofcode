@@ -54,6 +54,16 @@ fn fire_probe(start: Coord, dir: Direction, area: Area, verbose: bool) -> Option
     return None;
 }
 
+fn fire_all_probes(area: Area) -> Vec<i32> {
+    let dxs: Range<i32> = 0..area.max.x + 1; // assumes target area x > 0
+    let dys: Range<i32> = area.min.y - 1..-area.min.y + 1;  // assumes target y < 0
+    let start = Coord { x: 0, y: 0 };
+    return dxs
+        .cartesian_product(dys)
+        .filter_map(|(dx, dy)| fire_probe(start, Direction { dx: dx, dy: dy }, area, false))
+        .collect();
+}
+
 impl BaseDay for Day17 {
     fn parse(&mut self, input: &mut InputReader) {
         fn parse_line(line: String) -> Area {
@@ -78,27 +88,12 @@ impl BaseDay for Day17 {
     }
 
     fn pt1(&mut self) -> String {
-        let area = self.vals[0];
-        let dxs: Range<i32> = 0..area.max.x + 1; // assumes target area x > 0
-        let dys: Range<i32> = area.min.y - 1..area.max.x + 1;
-        let start = Coord { x: 0, y: 0 };
-        let ret = dxs
-            .cartesian_product(dys)
-            .filter_map(|(dx, dy)| fire_probe(start, Direction { dx: dx, dy: dy }, area, false))
-            .max()
-            .unwrap();
+        let ret = *fire_all_probes(self.vals[0]).iter().max().unwrap();
         return ret.to_string();
     }
 
     fn pt2(&mut self) -> String {
-        let area = self.vals[0];
-        let dxs: Range<i32> = 0..area.max.x + 1; // assumes target area x > 0
-        let dys: Range<i32> = area.min.y - 1..area.max.x + 1;
-        let start = Coord { x: 0, y: 0 };
-        let ret = dxs
-            .cartesian_product(dys)
-            .filter_map(|(dx, dy)| fire_probe(start, Direction { dx: dx, dy: dy }, area, false))
-            .count();
+        let ret = fire_all_probes(self.vals[0]).len();
         return ret.to_string();
     }
 }
