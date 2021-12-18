@@ -1,15 +1,8 @@
-use std::boxed::Box;
+use std::rc::Rc;
 
-#[derive(PartialEq, Eq, Clone, Debug)]
-enum SnumberType {
+enum Snumber {
     Literal(i32),
-    Pair(Box<Snumber>),
-}
-
-#[derive(PartialEq, Eq, Clone, Debug)]
-struct Snumber {
-    left: SnumberType,
-    right: SnumberType,
+    Pair(Rc<Snumber>, Rc<Snumber>),
 }
 
 extern crate common;
@@ -17,10 +10,10 @@ extern crate common;
 use common::framework::{parse_lines, run_day, BaseDay, InputReader};
 
 struct Day18 {
-    vals: Vec<Snumber>,
+    vals: Vec<Rc<Snumber>>,
 }
 
-fn parse_line(line: String) -> Snumber {
+fn parse_line(line: String) -> Rc<Snumber> {
     let mut chars = line.chars().filter(|c| *c != ' ').collect();
     let ret = parse_line_recur(&mut chars);
     if chars.len() != 0 {
@@ -48,187 +41,162 @@ fn peek_for(e: char, chs: &Vec<char>) -> bool {
     }
 }
 
-fn parse_line_recur(chs: &mut Vec<char>) -> Snumber {
-    expect('[', chs);
-    let left: SnumberType;
+fn parse_line_recur(chs: &mut Vec<char>) -> Rc<Snumber> {
     if peek_for('[', chs) {
-        left = SnumberType::Pair(Box::new(parse_line_recur(chs)));
+        expect('[', chs);
+        let left = parse_line_recur(chs);
+        expect(',', chs);
+        let right = parse_line_recur(chs);
+        expect(']', chs);
+        return Rc::new(Snumber::Pair(left, right));
     } else {
         let c = chs.remove(0);
-        left = SnumberType::Literal(c.to_digit(10).unwrap() as i32);
+        return Rc::new(Snumber::Literal(c.to_digit(10).unwrap() as i32));
     }
-    expect(',', chs);
-    let right: SnumberType;
-    if peek_for('[', chs) {
-        right = SnumberType::Pair(Box::new(parse_line_recur(chs)));
-    } else {
-        let c = chs.remove(0);
-        right = SnumberType::Literal(c.to_digit(10).unwrap() as i32);
-    }
-    expect(']', chs);
-    return Snumber { left: left, right: right };
 }
 
-fn add(left: &Snumber, right: &Snumber) -> Snumber {
-    let mut cur = Snumber { left: SnumberType::Pair(Box::new(left.clone())), right: SnumberType::Pair(Box::new(right.clone())) };
-    loop {
-        // print_snumber(&cur, false);
-        if let Some((exploded, _left_to, _right_to)) = try_explode(&cur, 4) {
-            cur = exploded.unwrap();
-            // if _left_to.is_some() {
-            //     println!("Silently discarding left {}", _left_to.unwrap());
-            // }
-            // if _right_to.is_some() {
-            //     println!("Silently discarding right {}", _right_to.unwrap());
-            // }
-            continue;
-        } else if let Some(split) = try_split(&cur) {
-            cur = split;
-            continue;
-        } else {
-            return cur;
+fn render_snumber(val: &Rc<Snumber>) -> String {
+    match &**val {
+        Snumber::Literal(num) => return num.to_string(),
+        Snumber::Pair(left, right) => {
+            let mut ret = "[".to_owned();
+            ret.push_str(&render_snumber(&left));
+            ret.push(',');
+            ret.push_str(&render_snumber(&right));
+            ret.push(']');
+            return ret;
         }
     }
 }
 
-fn add_all(vals: &Vec<Snumber>) -> Snumber {
-    let mut cur = vals[0].clone();
-    for nxt in &vals[1..vals.len()] {
-        cur = add(&cur, &nxt);
+fn print_snumber(val: &Rc<Snumber>) {
+    println!("{}", render_snumber(val));
+}
+
+fn add_snumber(x: &Rc<Snumber>, y: &Rc<Snumber>, verbose: bool) -> Rc<Snumber> {
+    let mut cur = Rc::new(Snumber::Pair(x.clone(), y.clone()));
+    loop {
+        if verbose {
+            print_snumber(&cur);
+        }
+        if let Some((new_cur, left_spill, right_spill)) = try_explode(&cur, 4) {
+            cur = new_cur;
+            if verbose {
+                if let Some(spill) = left_spill {
+                    println!("Discarding left {}", spill);
+                }
+                if let Some(spill) = right_spill {
+                    println!("Discarding right {}", spill);
+                }
+            }
+        } else if let Some(new_cur) = try_split(&cur) {
+            cur = new_cur;
+        } else {
+            break;
+        }
     }
     return cur;
 }
 
-fn try_explode(val: &Snumber, depth: i32) -> Option<(Option<Snumber>, Option<i32>, Option<i32>)> {
-    if depth <= 0 {
-        let left = match val.left {
-            SnumberType::Literal(num) => num,
-            _ => panic!("Bad left for explode"),
-        };
-        let right = match val.right {
-            SnumberType::Literal(num) => num,
-            _ => panic!("Bad right for explode"),
-        };
-        return Some((None, Some(left), Some(right)));
+fn add_all(vals: &Vec<Rc<Snumber>>) -> Rc<Snumber> {
+    if vals.len() == 0 {
+        return Rc::new(Snumber::Literal(0));
     }
-
-    if let Some((new_val, left_to, right_to)) = try_explode_single(&val.left, depth - 1) {
-        // our left exploded, therefore we can't handle left_to ourselves,
-        // but we might be able to handle right_to
-        if right_to.is_some() {
-            let new_right = stick_it(right_to.unwrap(), &val.right, true);
-            return Some((Some(Snumber { left: new_val, right: new_right }), left_to, None));
-        }
-        return Some((Some(Snumber { left: new_val, right: val.right.clone() }), left_to, right_to));
-    } else if let Some((new_val, left_to, right_to)) = try_explode_single(&val.right, depth - 1) {
-        // As above, we can't handle right, maybe can handle left
-        if left_to.is_some() {
-            let new_left = stick_it(left_to.unwrap(), &val.left, false);
-            return Some((Some(Snumber { left: new_left, right: new_val }), None, right_to));
-        }
-        return Some((Some(Snumber { left: val.left.clone(), right: new_val }), left_to, right_to));
-    } else {
-        return None;
+    let mut cur = vals[0].clone();
+    for nxt in &vals[1..vals.len()] {
+        cur = add_snumber(&cur, &nxt, false);
     }
+    return cur;
 }
 
-fn stick_it(amt: i32, val: &SnumberType, on_left: bool) -> SnumberType {
-    return match val {
-        SnumberType::Literal(num) => {
-            SnumberType::Literal(num + amt)
-        },
-        SnumberType::Pair(ptr) => {
-            if on_left {
-                SnumberType::Pair(Box::new(Snumber { left: stick_it(amt, &ptr.left, true), right: ptr.right.clone() }))
-            } else {
-                SnumberType::Pair(Box::new(Snumber { left: ptr.left.clone(), right: stick_it(amt, &ptr.right, false) }))
+fn try_explode(val: &Rc<Snumber>, depth: i32) -> Option<(Rc<Snumber>, Option<i32>, Option<i32>)> {
+    match &**val {
+        Snumber::Literal(_) => return None,
+        Snumber::Pair(left, right) => {
+            if depth <= 0 {
+                let left_val = match &**left {
+                    Snumber::Literal(num) => *num,
+                    _ => panic!("Bad left pair elem to explode"),
+                };
+                let right_val = match &**right {
+                    Snumber::Literal(num) => *num,
+                    _ => panic!("Bad right pair elem to explode"),
+                };
+                return Some((
+                    Rc::new(Snumber::Literal(0)),
+                    Some(left_val),
+                    Some(right_val),
+                ));
             }
-        }
-    }
-}
-
-fn try_explode_single(val: &SnumberType, depth: i32) -> Option<(SnumberType, Option<i32>, Option<i32>)> {
-    match val {
-        SnumberType::Literal(_) => None,
-        SnumberType::Pair(ptr) => {
-            if let Some((new_val, left_to, right_to)) = try_explode(&*ptr, depth) {
-                if new_val.is_none() {
-                    return Some((SnumberType::Literal(0), left_to, right_to));
-                } else {
-                    return Some((SnumberType::Pair(Box::new(new_val.unwrap())), left_to, right_to));
-                }
+            if let Some((new_val, left_spill, right_spill)) = try_explode(&left, depth - 1) {
+                let new_right = insert_to(right_spill, right, true);
+                return Some((Rc::new(Snumber::Pair(new_val, new_right)), left_spill, None));
+            } else if let Some((new_val, left_spill, right_spill)) = try_explode(&right, depth - 1)
+            {
+                let new_left = insert_to(left_spill, left, false);
+                return Some((Rc::new(Snumber::Pair(new_left, new_val)), None, right_spill));
             } else {
                 return None;
             }
-        },
+        }
     }
 }
 
-fn try_split(val: &Snumber) -> Option<Snumber> {
-    let ret = try_split_single(&val.left);
-    if ret.is_some() {
-        return Some(Snumber { left: ret.unwrap(), right: val.right.clone() });
+fn insert_to(maybe_spill: Option<i32>, val: &Rc<Snumber>, to_left: bool) -> Rc<Snumber> {
+    if let Some(spill_value) = maybe_spill {
+        match &**val {
+            Snumber::Literal(num) => {
+                return Rc::new(Snumber::Literal(num + spill_value));
+            }
+            Snumber::Pair(left, right) => {
+                return Rc::new(Snumber::Pair(
+                    if to_left {
+                        insert_to(maybe_spill, left, true)
+                    } else {
+                        left.clone()
+                    },
+                    if to_left {
+                        right.clone()
+                    } else {
+                        insert_to(maybe_spill, right, false)
+                    },
+                ));
+            }
+        }
+    } else {
+        return val.clone();
     }
-
-    let ret = try_split_single(&val.right);
-    if ret.is_some() {
-        return Some(Snumber { left: val.left.clone(), right: ret.unwrap() });
-    }
-
-    return None;
 }
 
-fn try_split_single(val: &SnumberType) -> Option<SnumberType> {
-    return match val {
-        SnumberType::Literal(num) => {
+fn try_split(val: &Rc<Snumber>) -> Option<Rc<Snumber>> {
+    match &**val {
+        Snumber::Literal(num) => {
             let num = *num;
             if num >= 10 {
-                let new_left = SnumberType::Literal(num / 2);
-                let new_right = SnumberType::Literal(num / 2 + num % 2);
-                Some(SnumberType::Pair(Box::new(Snumber { left: new_left, right: new_right })))
-            } else {
-                None
-            }
-        },
-        SnumberType::Pair(ptr) => {
-            let ret = try_split(&*ptr);
-            if ret.is_some() {
-                return Some(SnumberType::Pair(Box::new(ret.unwrap())));
+                let left = Rc::new(Snumber::Literal(num / 2));
+                let right = Rc::new(Snumber::Literal(num / 2 + num % 2));
+                return Some(Rc::new(Snumber::Pair(left, right)));
             } else {
                 return None;
             }
         }
-    };
-}
-
-fn print_snumber(val: &Snumber, nested: bool) {
-    print!("[");
-    match &val.left {
-        SnumberType::Literal(num) => print!("{}", num),
-        SnumberType::Pair(ptr) => print_snumber(&*ptr, true),
-    };
-    print!(",");
-    match &val.right {
-        SnumberType::Literal(num) => print!("{}", num),
-        SnumberType::Pair(ptr) => print_snumber(&*ptr, true),
-    };
-    if nested {
-        print!("]");
-    } else {
-        println!("]");
+        Snumber::Pair(left, right) => {
+            if let Some(new_val) = try_split(&left) {
+                return Some(Rc::new(Snumber::Pair(new_val, right.clone())));
+            } else if let Some(new_val) = try_split(&right) {
+                return Some(Rc::new(Snumber::Pair(left.clone(), new_val)));
+            } else {
+                return None;
+            }
+        }
     }
 }
 
-fn magnitude(val: &Snumber) -> i32 {
-    let left = match &val.left {
-        SnumberType::Literal(num) => *num,
-        SnumberType::Pair(ptr) => magnitude(&*ptr),
+fn magnitude(val: &Rc<Snumber>) -> i32 {
+    return match &**val {
+        Snumber::Literal(num) => *num,
+        Snumber::Pair(left, right) => 3 * magnitude(left) + 2 * magnitude(right),
     };
-    let right = match &val.right {
-        SnumberType::Literal(num) => *num,
-        SnumberType::Pair(ptr) => magnitude(&*ptr),
-    };
-    return 3 * left + 2 * right;
 }
 
 impl BaseDay for Day18 {
@@ -237,25 +205,23 @@ impl BaseDay for Day18 {
     }
 
     fn pt1(&mut self) -> String {
-        let sum = add_all(&self.vals);
-        print_snumber(&sum, false);
-        return magnitude(&sum).to_string();
+        let total = add_all(&self.vals);
+        return magnitude(&total).to_string();
     }
 
     fn pt2(&mut self) -> String {
-        let mut most = 0;
+        let mut best = 0;
         for i in 0..self.vals.len() {
             for j in 0..self.vals.len() {
-                if i == j {
-                    continue;
-                }
-                let sum = magnitude(&add(&self.vals[i], &self.vals[j]));
-                if sum > most {
-                    most = sum;
+                if i != j {
+                    let sum = magnitude(&add_snumber(&self.vals[i], &self.vals[j], false));
+                    if sum > best {
+                        best = sum;
+                    }
                 }
             }
         }
-        return most.to_string();
+        return best.to_string();
     }
 }
 

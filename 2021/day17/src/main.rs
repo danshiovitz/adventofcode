@@ -56,7 +56,7 @@ fn fire_probe(start: Coord, dir: Direction, area: Area, verbose: bool) -> Option
 
 fn fire_all_probes(area: Area) -> Vec<i32> {
     let dxs: Range<i32> = 0..area.max.x + 1; // assumes target area x > 0
-    let dys: Range<i32> = area.min.y - 1..-area.min.y + 1;  // assumes target y < 0
+    let dys: Range<i32> = area.min.y - 1..-area.min.y + 1; // assumes target y < 0
     let start = Coord { x: 0, y: 0 };
     return dxs
         .cartesian_product(dys)
