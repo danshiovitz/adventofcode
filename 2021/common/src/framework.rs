@@ -11,6 +11,7 @@ pub type InputReader = BufReader<Box<dyn Read>>;
 
 pub trait BaseDay {
     fn parse(&mut self, input: &mut InputReader);
+    fn setup(&mut self) {}
     fn pt1(&mut self) -> String;
     fn pt2(&mut self) -> String;
 }
@@ -119,6 +120,7 @@ pub fn run_day(day: &mut dyn BaseDay) {
         Err(_) => panic!("Bad file: {}", &args[1]),
     };
     day.parse(&mut input);
+    day.setup();
 
     let expected = load_expected(&args[1]);
 
