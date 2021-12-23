@@ -18,6 +18,7 @@ pub struct Line {
     pub end: Coord,
 }
 
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct Grid<T> {
     pub coords: HashMap<Coord, T>,
     pub min: Coord,

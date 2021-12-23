@@ -78,10 +78,12 @@ where
     let mut max_x = 0;
     let mut max_y = 0;
     for (y, line) in input.lines().enumerate() {
+        let y = y as i32;
         for (x, ch) in line.unwrap().chars().enumerate() {
+            let x = x as i32;
             let coord = Coord {
-                x: x as i32,
-                y: y as i32,
+                x: x,
+                y: y,
             };
             match parse_coord(ch, &coord) {
                 Some(val) => {
@@ -89,9 +91,11 @@ where
                 }
                 None => {}
             }
-            max_x = x as i32;
+            if x > max_x {
+                max_x = x;
+            }
         }
-        max_y = y as i32;
+        max_y = y;
     }
     return Grid::<T> {
         coords: coords,
