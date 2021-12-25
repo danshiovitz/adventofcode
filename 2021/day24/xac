@@ -1,0 +1,29 @@
+inp w
+mul x 0
+add x z
+mod x 26
+div z 1
+add x 13
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 6
+mul y x
+add z y
+
+w = input()
+x = z % 26
+x += 13
+if x != w:
+   z *= 26
+   z += (w + 6)
+
+# for digit 1, z ends up as D1 + 15
+# for digit 2, z ends up as (D1 + 15) * 26 + (D2 + 5)
+# for digit 3, z ends up as ((D1 + 15) * 26 + (D2 + 5)) * 26 + (D3 + 6)

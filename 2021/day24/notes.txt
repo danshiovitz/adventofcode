@@ -1,0 +1,41 @@
+xad:add x -14
+xaf:add x -7
+xaj:add x -7
+xak:add x -8
+xal:add x -7
+xam:add x -5
+xan:add x -10
+
+1 (+15) 1
+2 (+5)  12
+3 (+6)  123
+4 (+7)  12 - backs out digit 3 with -14 (so D3 + 6 - 14 = D4; D3 - 8 = D4)
+5 (+9)  125
+6 (+6)  12 - backs out digit 5 with -7 (so D5 + 9 - 7 = D6; D5 + 2 = D6)
+7 (+14) 127
+8 (+3)  1278
+9 (+1)  12789
+10 (+3) 1278 - backs out digit 9 with -7 (so D9 + 1 - 7 = D10; D9 - 6 = D10)
+11 (+4) 127 - backs out digit 8 with -8 (so D8 +3 - 8 = D11; D8 - 5 = D11)
+12 (+6) 12 - backs out digit 7 with -7 (so D7 + 14 - 7 = D12; D7 + 7 = D12)
+13 (+7) 1 - backs out digit 2 with -5 (so D2 + 5 - 5 = D13; D2 = D13)
+14 (+1) 0 - backs out digit 1 with -10 (so D1 + 15 - 10 = D14; D1 + 5 = D14)
+
+So in theory digits are:
+1: 4 / 1
+2: 9 / 1
+3: 9 / 9
+4: 1 / 1
+5: 7 / 1
+6: 9 / 3
+7: 2 / 1
+8: 9 / 6
+9: 9 / 7
+10: 3 / 1
+11: 4 / 1
+12: 9 / 8
+13: 9 / 1
+14: 9 / 6
+
+49917929934999
+11911316711816
