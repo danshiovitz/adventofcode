@@ -3,8 +3,8 @@ use std::collections::{HashMap, HashSet};
 extern crate common;
 
 use common::framework::{parse_grid, run_day, BaseDay, InputReader};
-use common::grid::{Coord, Grid, four_neighbors, print_grid};
-use common::solver::{SolverBase, SolverState, cost_minimizing_dfs};
+use common::grid::{four_neighbors, print_grid, Coord, Grid};
+use common::solver::{cost_minimizing_dfs, SolverBase, SolverState};
 
 struct Day23 {
     grid: Grid<char>,
@@ -32,7 +32,7 @@ fn organize(grid: &Grid<char>, positions: &HashMap<char, Vec<Coord>>) -> i32 {
 
 #[derive(PartialEq, Eq, Clone, Ord, PartialOrd, Debug, Hash)]
 struct State {
-    positions: Vec<Coord>,  // A A B B C C D D
+    positions: Vec<Coord>, // A A B B C C D D
 }
 
 impl SolverState for State {}
@@ -67,7 +67,12 @@ impl Recurser {
         if !dests.contains(&pos) {
             return true;
         }
-        let others: HashSet<Coord> = state.positions.iter().zip(self.pchars.iter()).filter_map(|(p, oc)| if *oc != ch { Some(*p) } else { None }).collect();
+        let others: HashSet<Coord> = state
+            .positions
+            .iter()
+            .zip(self.pchars.iter())
+            .filter_map(|(p, oc)| if *oc != ch { Some(*p) } else { None })
+            .collect();
         return others.intersection(&dests).count() > 0;
     }
 
@@ -108,7 +113,10 @@ impl SolverBase<State> for Recurser {
             let ch = self.pchars[idx];
             // moves are either from the room to a hallway, or a hallway to a room
             if self.in_hallway(pos) {
-                let mut dests: Vec<Coord> = (*self.destinations.get(&ch).unwrap()).iter().map(|c| *c).collect();
+                let mut dests: Vec<Coord> = (*self.destinations.get(&ch).unwrap())
+                    .iter()
+                    .map(|c| *c)
+                    .collect();
                 // we always move to the deepest one we can - there's never any point
                 // stopping earlier
                 dests.sort_by(|a, b| b.y.partial_cmp(&a.y).unwrap());
@@ -162,8 +170,20 @@ impl SolverBase<State> for Recurser {
     }
 }
 
-fn calc_moves(grid: &Grid<char>, pchars: &Vec<char>) -> (HashMap<(Coord, Coord), Vec<Coord>>, HashMap<char, HashSet<Coord>>, HashSet<Coord>) {
-    let mut hallways: HashSet<Coord> = grid.coords.keys().map(|c| *c).filter(|c| c.y == 1).collect();
+fn calc_moves(
+    grid: &Grid<char>,
+    pchars: &Vec<char>,
+) -> (
+    HashMap<(Coord, Coord), Vec<Coord>>,
+    HashMap<char, HashSet<Coord>>,
+    HashSet<Coord>,
+) {
+    let mut hallways: HashSet<Coord> = grid
+        .coords
+        .keys()
+        .map(|c| *c)
+        .filter(|c| c.y == 1)
+        .collect();
     if hallways.len() < 5 {
         panic!("Bad hallway count? {}", hallways.len());
     }
@@ -240,8 +260,8 @@ impl BaseDay for Day23 {
         let mut new_positions = self.positions.clone();
         new_grid.max = Coord { x: new_grid.max.x, y: new_grid.max.y + 2 };
         for nx in vec![3, 5, 7, 9] {
-            new_grid.coords.insert(Coord {x: nx, y: 4}, '.');
-            new_grid.coords.insert(Coord {x: nx, y: 5}, '.');
+            new_grid.coords.insert(Coord { x: nx, y: 4 }, '.');
+            new_grid.coords.insert(Coord { x: nx, y: 5 }, '.');
         }
         for ps in new_positions.values_mut() {
             for c in ps {
@@ -250,10 +270,22 @@ impl BaseDay for Day23 {
                 }
             }
         }
-        new_positions.get_mut(&'A').unwrap().extend(vec![Coord {x: 9, y: 3}, Coord {x: 7, y: 4}]);
-        new_positions.get_mut(&'B').unwrap().extend(vec![Coord {x: 7, y: 3}, Coord {x: 5, y: 4}]);
-        new_positions.get_mut(&'C').unwrap().extend(vec![Coord {x: 5, y: 3}, Coord {x: 9, y: 4}]);
-        new_positions.get_mut(&'D').unwrap().extend(vec![Coord {x: 3, y: 3}, Coord {x: 3, y: 4}]);
+        new_positions
+            .get_mut(&'A')
+            .unwrap()
+            .extend(vec![Coord { x: 9, y: 3 }, Coord { x: 7, y: 4 }]);
+        new_positions
+            .get_mut(&'B')
+            .unwrap()
+            .extend(vec![Coord { x: 7, y: 3 }, Coord { x: 5, y: 4 }]);
+        new_positions
+            .get_mut(&'C')
+            .unwrap()
+            .extend(vec![Coord { x: 5, y: 3 }, Coord { x: 9, y: 4 }]);
+        new_positions
+            .get_mut(&'D')
+            .unwrap()
+            .extend(vec![Coord { x: 3, y: 3 }, Coord { x: 3, y: 4 }]);
 
         let cost = organize(&new_grid, &new_positions);
         return cost.to_string();
@@ -261,9 +293,6 @@ impl BaseDay for Day23 {
 }
 
 fn main() {
-    let mut day = Day23 {
-        grid: Grid::new(),
-        positions: HashMap::new(),
-    };
+    let mut day = Day23 { grid: Grid::new(), positions: HashMap::new() };
     run_day(&mut day);
 }

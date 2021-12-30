@@ -19,10 +19,7 @@ where
     }
     let mut cost_for = |lvl: i32| vals.iter().map(|v| cost_calc(*v, lvl)).sum::<i32>();
     let mut costs = (min_v..=max_v)
-        .map(|v| C {
-            lvl: v,
-            cost: cost_for(v),
-        })
+        .map(|v| C { lvl: v, cost: cost_for(v) })
         .collect::<Vec<C>>();
     costs.sort_by(|a, b| a.cost.partial_cmp(&b.cost).unwrap());
     for c in &costs {

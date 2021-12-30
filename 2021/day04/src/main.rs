@@ -26,10 +26,7 @@ fn parse_solve_board(lines: &Vec<String>, numbers: &HashMap<i32, i32>) -> Board 
     let num_iter = |line: &str| {
         sep.split(&line.trim())
             .map(|n| n.parse::<i32>().unwrap())
-            .map(|n| P {
-                value: n,
-                turn: *numbers.get(&n).unwrap(),
-            })
+            .map(|n| P { value: n, turn: *numbers.get(&n).unwrap() })
             .collect::<Vec<P>>()
     };
     let vals: Vec<Vec<P>> = lines.iter().map(|line| num_iter(line)).collect();
@@ -57,11 +54,7 @@ fn parse_solve_board(lines: &Vec<String>, numbers: &HashMap<i32, i32>) -> Board 
         })
         .sum();
     let score = unmarked * win_p.value;
-    return Board {
-        idx: 0,
-        win_turn: win_p.turn,
-        score: score,
-    };
+    return Board { idx: 0, win_turn: win_p.turn, score: score };
 }
 
 impl BaseDay for Day04 {

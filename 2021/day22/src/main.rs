@@ -6,7 +6,7 @@ use lazy_regex::regex;
 extern crate common;
 
 use common::framework::{parse_lines, run_day, BaseDay, InputReader};
-use common::grid3d::{Coord3d};
+use common::grid3d::Coord3d;
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
 struct Cube {
@@ -44,7 +44,10 @@ fn filter_cubes(cubes: &Vec<Cube>, filter_val: i32) -> Vec<Cube> {
         max: Coord3d { x: filter_val, y: filter_val, z: filter_val },
         enable: false,
     };
-    return cubes.iter().filter_map(|c| get_overlap(&overall, c)).collect();
+    return cubes
+        .iter()
+        .filter_map(|c| get_overlap(&overall, c))
+        .collect();
 }
 
 fn init_reactor(cubes: &Vec<Cube>, verbose: bool) -> i64 {
@@ -53,10 +56,18 @@ fn init_reactor(cubes: &Vec<Cube>, verbose: bool) -> i64 {
 
     while !working.is_empty() {
         if verbose {
-            println!("Working size={}, active size={}", working.len(), actives.len());
+            println!(
+                "Working size={}, active size={}",
+                working.len(),
+                actives.len()
+            );
         }
         let cur = working.remove(0);
-        let overlap = actives.iter().filter_map(|a| get_overlap(a, &cur).map(|o| (*a, o))).take(1).next();
+        let overlap = actives
+            .iter()
+            .filter_map(|a| get_overlap(a, &cur).map(|o| (*a, o)))
+            .take(1)
+            .next();
         if overlap.is_none() {
             if cur.enable {
                 actives.insert(cur);
@@ -69,8 +80,13 @@ fn init_reactor(cubes: &Vec<Cube>, verbose: bool) -> i64 {
         let shatter_active = shatter(&active, &overlap);
 
         if verbose {
-            println!("Found overlap between {:?} (shattered into {}) and {:?} (shattered into {})", &cur,
-            shatter_cur.len(), active, shatter_active.len());
+            println!(
+                "Found overlap between {:?} (shattered into {}) and {:?} (shattered into {})",
+                &cur,
+                shatter_cur.len(),
+                active,
+                shatter_active.len()
+            );
         }
 
         actives.remove(&active);
@@ -101,7 +117,9 @@ fn init_reactor(cubes: &Vec<Cube>, verbose: bool) -> i64 {
 }
 
 fn cube_volume(cube: &Cube) -> i64 {
-    return (cube.max.x - cube.min.x + 1) as i64 * (cube.max.y - cube.min.y + 1) as i64 * (cube.max.z - cube.min.z + 1) as i64;
+    return (cube.max.x - cube.min.x + 1) as i64
+        * (cube.max.y - cube.min.y + 1) as i64
+        * (cube.max.z - cube.min.z + 1) as i64;
 }
 
 fn get_overlap(first: &Cube, second: &Cube) -> Option<Cube> {
@@ -189,7 +207,9 @@ fn shatter(volume: &Cube, overlap: &Cube) -> Vec<Cube> {
 impl BaseDay for Day22 {
     fn parse(&mut self, input: &mut InputReader) {
         fn parse_line(line: String) -> Cube {
-            let rex = regex!(r#"(on|off) x=(-?\d+)\.\.(-?\d+),\s*y=(-?\d+)\.\.(-?\d+),\s*z=(-?\d+)\.\.(-?\d+)"#);
+            let rex = regex!(
+                r#"(on|off) x=(-?\d+)\.\.(-?\d+),\s*y=(-?\d+)\.\.(-?\d+),\s*z=(-?\d+)\.\.(-?\d+)"#
+            );
             match rex.captures(&line) {
                 Some(c) => {
                     return Cube {

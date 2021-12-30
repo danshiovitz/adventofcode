@@ -62,12 +62,24 @@ impl FlagManager {
 
 // return the minimum cost to reach a state for which is_finished is true, where transitions
 // from each state are given by gen_possible_moves
-pub fn cost_minimizing_dfs<S>(solver: &dyn SolverBase<S>, start_state: &S) -> i32 where S: SolverState {
+pub fn cost_minimizing_dfs<S>(solver: &dyn SolverBase<S>, start_state: &S) -> i32
+where
+    S: SolverState,
+{
     let mut cache = HashMap::new();
     return cost_minimizing_dfs_recur(solver, start_state, 0, solver.max_cost(), &mut cache);
 }
 
-fn cost_minimizing_dfs_recur<S>(solver: &dyn SolverBase<S>, state: &S, cur_cost: i32, best_cost: i32, cache: &mut HashMap<S, (i32, i32)>) -> i32 where S: SolverState {
+fn cost_minimizing_dfs_recur<S>(
+    solver: &dyn SolverBase<S>,
+    state: &S,
+    cur_cost: i32,
+    best_cost: i32,
+    cache: &mut HashMap<S, (i32, i32)>,
+) -> i32
+where
+    S: SolverState,
+{
     if solver.is_finished(state) {
         println!("Found finish state with cost {}", cur_cost);
         return cur_cost;
@@ -111,12 +123,22 @@ fn cost_minimizing_dfs_recur<S>(solver: &dyn SolverBase<S>, state: &S, cur_cost:
     return pbest;
 }
 
-pub fn count_all_paths_dfs<S>(solver: &dyn SolverBase<S>, start_state: &S) -> i32 where S: SolverState {
+pub fn count_all_paths_dfs<S>(solver: &dyn SolverBase<S>, start_state: &S) -> i32
+where
+    S: SolverState,
+{
     let mut cache = HashMap::new();
     return count_all_paths_dfs_recur(solver, start_state, &mut cache);
 }
 
-fn count_all_paths_dfs_recur<S>(solver: &dyn SolverBase<S>, state: &S, cache: &mut HashMap<S, i32>) -> i32 where S: SolverState {
+fn count_all_paths_dfs_recur<S>(
+    solver: &dyn SolverBase<S>,
+    state: &S,
+    cache: &mut HashMap<S, i32>,
+) -> i32
+where
+    S: SolverState,
+{
     if solver.is_finished(state) {
         return 1;
     }
@@ -151,7 +173,10 @@ fn count_all_paths_dfs_recur<S>(solver: &dyn SolverBase<S>, state: &S, cache: &m
 }
 
 // TODO: make this a-star
-pub fn cost_minimizing_bfs<S>(solver: &dyn SolverBase<S>, start_state: &S) -> i32 where S: SolverState {
+pub fn cost_minimizing_bfs<S>(solver: &dyn SolverBase<S>, start_state: &S) -> i32
+where
+    S: SolverState,
+{
     let mut working = Vec::new();
     working.push((start_state.clone(), 0));
     while !working.is_empty() {
@@ -176,7 +201,9 @@ pub trait SolverBase<S> {
     // returns a list of (cost, new state) pairs
     fn gen_possible_moves(&self, state: &S) -> Vec<(i32, S)>;
     fn is_verbose(&self) -> bool;
-    fn max_cost(&self) -> i32 { return i32::MAX - 1; }
+    fn max_cost(&self) -> i32 {
+        return i32::MAX - 1;
+    }
 }
 
 pub trait SolverState: Eq + Hash + Ord + PartialOrd + Debug + Clone {}

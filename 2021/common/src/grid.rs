@@ -37,59 +37,23 @@ impl<T> Grid<T> {
 
 pub fn four_neighbors(coord: &Coord) -> Vec<Coord> {
     return vec![
-        Coord {
-            x: coord.x + 1,
-            y: coord.y,
-        },
-        Coord {
-            x: coord.x - 1,
-            y: coord.y,
-        },
-        Coord {
-            x: coord.x,
-            y: coord.y + 1,
-        },
-        Coord {
-            x: coord.x,
-            y: coord.y - 1,
-        },
+        Coord { x: coord.x + 1, y: coord.y },
+        Coord { x: coord.x - 1, y: coord.y },
+        Coord { x: coord.x, y: coord.y + 1 },
+        Coord { x: coord.x, y: coord.y - 1 },
     ];
 }
 
 pub fn eight_neighbors(coord: &Coord) -> Vec<Coord> {
     return vec![
-        Coord {
-            x: coord.x + 1,
-            y: coord.y,
-        },
-        Coord {
-            x: coord.x - 1,
-            y: coord.y,
-        },
-        Coord {
-            x: coord.x,
-            y: coord.y + 1,
-        },
-        Coord {
-            x: coord.x,
-            y: coord.y - 1,
-        },
-        Coord {
-            x: coord.x + 1,
-            y: coord.y + 1,
-        },
-        Coord {
-            x: coord.x + 1,
-            y: coord.y - 1,
-        },
-        Coord {
-            x: coord.x - 1,
-            y: coord.y + 1,
-        },
-        Coord {
-            x: coord.x - 1,
-            y: coord.y - 1,
-        },
+        Coord { x: coord.x + 1, y: coord.y },
+        Coord { x: coord.x - 1, y: coord.y },
+        Coord { x: coord.x, y: coord.y + 1 },
+        Coord { x: coord.x, y: coord.y - 1 },
+        Coord { x: coord.x + 1, y: coord.y + 1 },
+        Coord { x: coord.x + 1, y: coord.y - 1 },
+        Coord { x: coord.x - 1, y: coord.y + 1 },
+        Coord { x: coord.x - 1, y: coord.y - 1 },
     ];
 }
 
@@ -172,10 +136,7 @@ pub fn get_unit_direction(start: &Coord, end: &Coord) -> Direction {
 }
 
 pub fn add_direction(start: &Coord, dir: &Direction) -> Coord {
-    return Coord {
-        x: start.x + dir.dx,
-        y: start.y + dir.dy,
-    };
+    return Coord { x: start.x + dir.dx, y: start.y + dir.dy };
 }
 
 pub fn manhattan(start: &Coord, end: &Coord) -> i32 {

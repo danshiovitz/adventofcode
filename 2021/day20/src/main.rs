@@ -10,7 +10,12 @@ struct Day20 {
     image: HashMap<Coord, bool>,
 }
 
-fn enhance(image: &HashMap<Coord, bool>, algo: &HashSet<i32>, rounds: i32, verbose: bool) -> HashMap<Coord, bool> {
+fn enhance(
+    image: &HashMap<Coord, bool>,
+    algo: &HashSet<i32>,
+    rounds: i32,
+    verbose: bool,
+) -> HashMap<Coord, bool> {
     let mut cur = image.clone();
 
     fn flip(bit: u8, coord: Coord, image: &HashMap<Coord, bool>, default: bool) -> i32 {
@@ -35,15 +40,15 @@ fn enhance(image: &HashMap<Coord, bool>, algo: &HashSet<i32>, rounds: i32, verbo
         for x in min_x - 1..max_x + 2 {
             for y in min_y - 1..max_y + 2 {
                 let mut key = 0;
-                key |= flip(8, Coord { x: x - 1, y: y - 1}, &cur, get_default(round));
-                key |= flip(7, Coord { x: x + 0, y: y - 1}, &cur, get_default(round));
-                key |= flip(6, Coord { x: x + 1, y: y - 1}, &cur, get_default(round));
-                key |= flip(5, Coord { x: x - 1, y: y + 0}, &cur, get_default(round));
-                key |= flip(4, Coord { x: x + 0, y: y + 0}, &cur, get_default(round));
-                key |= flip(3, Coord { x: x + 1, y: y + 0}, &cur, get_default(round));
-                key |= flip(2, Coord { x: x - 1, y: y + 1}, &cur, get_default(round));
-                key |= flip(1, Coord { x: x + 0, y: y + 1}, &cur, get_default(round));
-                key |= flip(0, Coord { x: x + 1, y: y + 1}, &cur, get_default(round));
+                key |= flip(8, Coord { x: x - 1, y: y - 1 }, &cur, get_default(round));
+                key |= flip(7, Coord { x: x + 0, y: y - 1 }, &cur, get_default(round));
+                key |= flip(6, Coord { x: x + 1, y: y - 1 }, &cur, get_default(round));
+                key |= flip(5, Coord { x: x - 1, y: y + 0 }, &cur, get_default(round));
+                key |= flip(4, Coord { x: x + 0, y: y + 0 }, &cur, get_default(round));
+                key |= flip(3, Coord { x: x + 1, y: y + 0 }, &cur, get_default(round));
+                key |= flip(2, Coord { x: x - 1, y: y + 1 }, &cur, get_default(round));
+                key |= flip(1, Coord { x: x + 0, y: y + 1 }, &cur, get_default(round));
+                key |= flip(0, Coord { x: x + 1, y: y + 1 }, &cur, get_default(round));
                 if key < 0 || key >= 512 {
                     panic!("Bad key: {}", key);
                 }
@@ -64,7 +69,10 @@ fn enhance(image: &HashMap<Coord, bool>, algo: &HashSet<i32>, rounds: i32, verbo
 
             for y in min_y - 1..max_y + 2 {
                 for x in min_x - 1..max_x + 2 {
-                    if *cur.get(&Coord {x: x, y: y}).unwrap_or(&(get_default(round))) {
+                    if *cur
+                        .get(&Coord { x: x, y: y })
+                        .unwrap_or(&(get_default(round)))
+                    {
                         print!("#");
                     } else {
                         print!(".");
@@ -86,7 +94,11 @@ impl BaseDay for Day20 {
             if line.len() != 512 {
                 panic!("Ack");
             }
-            self.algo = line.chars().enumerate().filter_map(|(idx, v)| if v == '#' { Some(idx as i32) } else { None }).collect();
+            self.algo = line
+                .chars()
+                .enumerate()
+                .filter_map(|(idx, v)| if v == '#' { Some(idx as i32) } else { None })
+                .collect();
             return true;
         };
         parse_lines(input, &mut parse_line);

@@ -79,10 +79,7 @@ impl BaseDay for Day14 {
         let mut parse_rule = |line: String| -> Rule {
             let sep = regex!(r#"\s*->\s*"#);
             let pieces: Vec<&str> = sep.split(&line).collect();
-            return Rule {
-                pair: pieces[0].to_owned(),
-                insert: pieces[1].to_owned(),
-            };
+            return Rule { pair: pieces[0].to_owned(), insert: pieces[1].to_owned() };
         };
         self.rules = parse_lines(input, &mut parse_rule)
             .into_iter()
@@ -102,9 +99,6 @@ impl BaseDay for Day14 {
 }
 
 fn main() {
-    let mut day = Day14 {
-        template: "".to_string(),
-        rules: HashMap::new(),
-    };
+    let mut day = Day14 { template: "".to_string(), rules: HashMap::new() };
     run_day(&mut day);
 }

@@ -56,10 +56,7 @@ fn compute_costs(grid: &Grid<i32>, start: Coord, end: Coord, mult: i32) -> i32 {
 
     costs.insert(start, 0);
     let mut working = BinaryHeap::new();
-    working.push(State {
-        estimate: heuristic(&start),
-        coord: start.clone(),
-    });
+    working.push(State { estimate: heuristic(&start), coord: start.clone() });
     while let Some(cur) = working.pop() {
         let cur_cost = *costs.get(&cur.coord).unwrap_or(&i32::MAX);
         for ngh in four_neighbors(&cur.coord) {
@@ -74,10 +71,7 @@ fn compute_costs(grid: &Grid<i32>, start: Coord, end: Coord, mult: i32) -> i32 {
                     }
                     // found a cheaper way to get to ngh, so have to recalc it
                     costs.insert(ngh, via_cur_cost);
-                    working.push(State {
-                        estimate: via_cur_cost + heuristic(&ngh),
-                        coord: ngh,
-                    });
+                    working.push(State { estimate: via_cur_cost + heuristic(&ngh), coord: ngh });
                 }
             }
         }

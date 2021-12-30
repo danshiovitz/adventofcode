@@ -44,29 +44,17 @@ fn fold_points(points: &HashSet<Coord>, fold: Fold) -> HashSet<Coord> {
             Fold::X(x) => {
                 if point.x > x {
                     let new_x = 2 * x - point.x;
-                    ret.insert(Coord {
-                        x: new_x,
-                        y: point.y,
-                    });
+                    ret.insert(Coord { x: new_x, y: point.y });
                 } else {
-                    ret.insert(Coord {
-                        x: point.x,
-                        y: point.y,
-                    });
+                    ret.insert(Coord { x: point.x, y: point.y });
                 }
             }
             Fold::Y(y) => {
                 if point.y > y {
                     let new_y = 2 * y - point.y;
-                    ret.insert(Coord {
-                        x: point.x,
-                        y: new_y,
-                    });
+                    ret.insert(Coord { x: point.x, y: new_y });
                 } else {
-                    ret.insert(Coord {
-                        x: point.x,
-                        y: point.y,
-                    });
+                    ret.insert(Coord { x: point.x, y: point.y });
                 }
             }
         }
@@ -121,9 +109,6 @@ impl BaseDay for Day13 {
 }
 
 fn main() {
-    let mut day = Day13 {
-        points: HashSet::new(),
-        folds: Vec::new(),
-    };
+    let mut day = Day13 { points: HashSet::new(), folds: Vec::new() };
     run_day(&mut day);
 }

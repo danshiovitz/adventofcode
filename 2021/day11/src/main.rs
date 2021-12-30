@@ -59,11 +59,7 @@ fn run_flashes(grid: &Grid<i32>, pt1: bool, verbose: bool) -> i32 {
         }
 
         if verbose {
-            let grid_copy = Grid {
-                min: grid.min,
-                max: grid.max,
-                coords: cur_grid.clone(),
-            };
+            let grid_copy = Grid { min: grid.min, max: grid.max, coords: cur_grid.clone() };
             println!("Step {}", step + 1);
             print_grid(&grid_copy, &mut print_one);
             println!();

@@ -5,7 +5,7 @@ use lazy_regex::regex;
 extern crate common;
 
 use common::framework::{parse_lines, run_day, BaseDay, InputReader};
-use common::solver::{FlagManager, FlagSet, SolverBase, SolverState, Trid, count_all_paths_dfs};
+use common::solver::{count_all_paths_dfs, FlagManager, FlagSet, SolverBase, SolverState, Trid};
 
 struct Day12 {
     cxns: HashMap<String, Vec<String>>,
@@ -22,11 +22,7 @@ fn find_paths_dfs(
     let start_id = seen_mgr.translate(start);
     let end_id = seen_mgr.translate(end);
 
-    let mut state = State {
-        step: start_id,
-        seen: seen_mgr.init(),
-        used_extra: false,
-    };
+    let mut state = State { step: start_id, seen: seen_mgr.init(), used_extra: false };
     seen_mgr.set(&mut state.seen, start_id);
 
     let trans_cxns = cxns
@@ -60,7 +56,6 @@ fn find_paths_dfs(
 
     return count_all_paths_dfs(&recurser, &state);
 }
-
 
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
 struct State {
@@ -97,21 +92,14 @@ impl SolverBase<State> for Recurser {
             let other = *other;
             if self.seen_mgr.get(&state.seen, other) {
                 if other != self.start && !state.used_extra && self.allow_extra {
-                    let new_state = State {
-                        step: other,
-                        seen: state.seen,
-                        used_extra: true,
-                    };
+                    let new_state = State { step: other, seen: state.seen, used_extra: true };
                     ret.push((1, new_state));
                 }
                 continue;
             }
 
-            let mut new_state = State {
-                step: other,
-                seen: state.seen,
-                used_extra: state.used_extra,
-            };
+            let mut new_state =
+                State { step: other, seen: state.seen, used_extra: state.used_extra };
 
             if !self.reusable.contains(&other) {
                 self.seen_mgr.set(&mut new_state.seen, other);
@@ -162,8 +150,6 @@ impl BaseDay for Day12 {
 }
 
 fn main() {
-    let mut day = Day12 {
-        cxns: HashMap::new(),
-    };
+    let mut day = Day12 { cxns: HashMap::new() };
     run_day(&mut day);
 }

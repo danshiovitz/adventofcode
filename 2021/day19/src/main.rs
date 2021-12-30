@@ -7,7 +7,9 @@ use lazy_regex::regex;
 extern crate common;
 
 use common::framework::{run_day, BaseDay, InputReader};
-use common::grid3d::{Coord3d, Direction3d, add_direction3d, find_direction3d, sub_direction3d, manhattan3d};
+use common::grid3d::{
+    add_direction3d, find_direction3d, manhattan3d, sub_direction3d, Coord3d, Direction3d,
+};
 
 struct Scanner {
     name: String,
@@ -30,18 +32,22 @@ struct Day19 {
 
 const MIN_REQUIRED_OVERLAPS: usize = 12;
 
-fn find_possible_overlap(absolute: &Vec<Coord3d>, relative: &Vec<Coord3d>) -> Option<(Orientation, HashSet<Coord3d>)> {
+fn find_possible_overlap(
+    absolute: &Vec<Coord3d>,
+    relative: &Vec<Coord3d>,
+) -> Option<(Orientation, HashSet<Coord3d>)> {
     let abs_set: HashSet<Coord3d> = HashSet::from_iter(absolute.iter().map(|c| *c));
 
     let abs_diff_pairs = find_abs_diff_pairs(&absolute, &relative);
     for pair in &abs_diff_pairs {
-        for orient in compute_orientations(&pair.0.0, &pair.1.0) {
+        for orient in compute_orientations(&pair.0 .0, &pair.1 .0) {
             // see if this works for the other half of the diff line
-            if to_absolute(&pair.1.1, &orient) != pair.0.1 {
+            if to_absolute(&pair.1 .1, &orient) != pair.0 .1 {
                 continue;
             }
             // if so it's worth trying everywhere
-            let corrected: HashSet<Coord3d> = relative.iter().map(|c| to_absolute(c, &orient)).collect();
+            let corrected: HashSet<Coord3d> =
+                relative.iter().map(|c| to_absolute(c, &orient)).collect();
             let num_overlaps = abs_set.intersection(&corrected).count();
             if num_overlaps >= MIN_REQUIRED_OVERLAPS {
                 return Some((orient, corrected));
@@ -51,7 +57,10 @@ fn find_possible_overlap(absolute: &Vec<Coord3d>, relative: &Vec<Coord3d>) -> Op
     return None;
 }
 
-fn find_abs_diff_pairs(absolute: &Vec<Coord3d>, relative: &Vec<Coord3d>) -> Vec<((Coord3d, Coord3d), (Coord3d, Coord3d))> {
+fn find_abs_diff_pairs(
+    absolute: &Vec<Coord3d>,
+    relative: &Vec<Coord3d>,
+) -> Vec<((Coord3d, Coord3d), (Coord3d, Coord3d))> {
     fn do_single(coords: &Vec<Coord3d>) -> HashMap<i32, Vec<(Coord3d, Coord3d)>> {
         let mut ret: HashMap<i32, Vec<(Coord3d, Coord3d)>> = HashMap::new();
         // For simplicity later, put in X-Y and Y-X as two separate entries
@@ -60,7 +69,9 @@ fn find_abs_diff_pairs(absolute: &Vec<Coord3d>, relative: &Vec<Coord3d>) -> Vec<
                 if i == j {
                     continue;
                 }
-                let diff = (coords[i].x - coords[j].x).abs() + (coords[i].y - coords[j].y).abs() + (coords[i].z - coords[j].z).abs();
+                let diff = (coords[i].x - coords[j].x).abs()
+                    + (coords[i].y - coords[j].y).abs()
+                    + (coords[i].z - coords[j].z).abs();
                 if let Some(cur) = ret.get_mut(&diff) {
                     cur.push((coords[i], coords[j]));
                 } else {
@@ -193,7 +204,11 @@ impl BaseDay for Day19 {
             } else if let Some(c) = header_rex.captures(&line) {
                 cur = Some(Scanner { name: c[1].to_owned(), beacons: Vec::new() });
             } else if let Some(c) = coord_rex.captures(&line) {
-                let coord = Coord3d { x: c[1].parse::<i32>().unwrap(), y: c[2].parse::<i32>().unwrap(), z: c[3].parse::<i32>().unwrap() };
+                let coord = Coord3d {
+                    x: c[1].parse::<i32>().unwrap(),
+                    y: c[2].parse::<i32>().unwrap(),
+                    z: c[3].parse::<i32>().unwrap(),
+                };
                 if let Some(ref mut scanner) = cur {
                     scanner.beacons.push(coord);
                 } else {
@@ -209,8 +224,12 @@ impl BaseDay for Day19 {
     }
 
     fn setup(&mut self) {
-        self.all_beacons.extend(self.vals[0].beacons.iter().map(|c| *c));
-        let origin = Orientation { translation: Direction3d {dx: 0, dy: 0, dz: 0}, rotation: 0 };
+        self.all_beacons
+            .extend(self.vals[0].beacons.iter().map(|c| *c));
+        let origin = Orientation {
+            translation: Direction3d { dx: 0, dy: 0, dz: 0 },
+            rotation: 0,
+        };
         self.orientations = vec![origin; self.vals.len()];
         let mut done = HashSet::from([0]);
         while done.len() < self.vals.len() {
@@ -219,7 +238,10 @@ impl BaseDay for Day19 {
                 if done.contains(&idx) {
                     continue;
                 }
-                if let Some((orientation, corrected)) = find_possible_overlap(&self.all_beacons.iter().map(|c| *c).collect(), &scanner.beacons) {
+                if let Some((orientation, corrected)) = find_possible_overlap(
+                    &self.all_beacons.iter().map(|c| *c).collect(),
+                    &scanner.beacons,
+                ) {
                     println!("Found overlap for {}", scanner.name);
                     self.all_beacons.extend(corrected);
                     self.orientations[idx] = orientation;
@@ -239,12 +261,22 @@ impl BaseDay for Day19 {
 
     fn pt2(&mut self) -> String {
         let as_coord = |dir: Direction3d| Coord3d { x: dir.dx, y: dir.dy, z: dir.dz };
-        let max_md = self.orientations.iter().cartesian_product(self.orientations.iter()).map(|(d1, d2)| manhattan3d(&as_coord(d1.translation), &as_coord(d2.translation))).max().unwrap();
+        let max_md = self
+            .orientations
+            .iter()
+            .cartesian_product(self.orientations.iter())
+            .map(|(d1, d2)| manhattan3d(&as_coord(d1.translation), &as_coord(d2.translation)))
+            .max()
+            .unwrap();
         return max_md.to_string();
     }
 }
 
 fn main() {
-    let mut day = Day19 { vals: Vec::new(), orientations: Vec::new(), all_beacons: HashSet::new() };
+    let mut day = Day19 {
+        vals: Vec::new(),
+        orientations: Vec::new(),
+        all_beacons: HashSet::new(),
+    };
     run_day(&mut day);
 }

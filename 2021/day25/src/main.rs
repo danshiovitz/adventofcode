@@ -26,8 +26,16 @@ fn print_all(easts: &HashSet<Coord>, souths: &HashSet<Coord>, grid: &Grid<char>)
 }
 
 fn move_cukes(grid: &Grid<char>, verbose: bool) -> i32 {
-    let mut cur_easts: HashSet<Coord> = grid.coords.iter().filter_map(|(c, v)| if *v == '>' { Some(*c) } else { None }).collect();
-    let mut cur_souths: HashSet<Coord> = grid.coords.iter().filter_map(|(c, v)| if *v == 'v' { Some(*c) } else { None }).collect();
+    let mut cur_easts: HashSet<Coord> = grid
+        .coords
+        .iter()
+        .filter_map(|(c, v)| if *v == '>' { Some(*c) } else { None })
+        .collect();
+    let mut cur_souths: HashSet<Coord> = grid
+        .coords
+        .iter()
+        .filter_map(|(c, v)| if *v == 'v' { Some(*c) } else { None })
+        .collect();
 
     if verbose {
         println!("Initial");

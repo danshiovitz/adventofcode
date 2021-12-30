@@ -81,10 +81,7 @@ where
         let y = y as i32;
         for (x, ch) in line.unwrap().chars().enumerate() {
             let x = x as i32;
-            let coord = Coord {
-                x: x,
-                y: y,
-            };
+            let coord = Coord { x: x, y: y };
             match parse_coord(ch, &coord) {
                 Some(val) => {
                     coords.insert(coord, val);

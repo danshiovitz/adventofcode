@@ -40,11 +40,7 @@ fn run_deterministic_game(starts: &Vec<i32>) -> i32 {
 }
 
 fn run_dirac_game(starts: &Vec<i32>) -> i64 {
-    let state = State {
-        idx: 0,
-        curs: starts.clone(),
-        scores: vec![0; starts.len()],
-    };
+    let state = State { idx: 0, curs: starts.clone(), scores: vec![0; starts.len()] };
     let mut cache = HashMap::new();
     let scores = run_dirac_game_recur(&state, &mut cache);
     println!("Scores: {:?}", scores);
