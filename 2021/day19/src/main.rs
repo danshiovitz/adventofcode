@@ -7,7 +7,7 @@ use lazy_regex::regex;
 extern crate common;
 
 use common::framework::{run_day, BaseDay, InputReader};
-use common::grid::{Coord3d, Direction3d, add_direction3d, find_direction3d, sub_direction3d, manhattan3d};
+use common::grid3d::{Coord3d, Direction3d, add_direction3d, find_direction3d, sub_direction3d, manhattan3d};
 
 struct Scanner {
     name: String,

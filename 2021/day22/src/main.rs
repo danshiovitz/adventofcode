@@ -6,7 +6,7 @@ use lazy_regex::regex;
 extern crate common;
 
 use common::framework::{parse_lines, run_day, BaseDay, InputReader};
-use common::grid::{Coord3d};
+use common::grid3d::{Coord3d};
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
 struct Cube {

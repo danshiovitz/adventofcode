@@ -4,6 +4,7 @@ extern crate common;
 
 use common::framework::{parse_grid, run_day, BaseDay, InputReader};
 use common::grid::{Coord, Grid, four_neighbors, print_grid};
+use common::solver::{SolverBase, SolverState, cost_minimizing_dfs};
 
 struct Day23 {
     grid: Grid<char>,
@@ -24,12 +25,17 @@ fn organize(grid: &Grid<char>, positions: &HashMap<char, Vec<Coord>>) -> i32 {
     for ch in &sk {
         init_state.positions.extend(positions.get(ch).unwrap());
     }
-    let mut cache = HashMap::new();
     println!("Initial state:");
     recurser.print_state(&init_state);
-    // return recurser.execute_bfs(&init_state);
-    return recurser.execute_dfs(&init_state, 0, MAX_COST, &mut cache);
+    return cost_minimizing_dfs(&recurser, &init_state);
 }
+
+#[derive(PartialEq, Eq, Clone, Ord, PartialOrd, Debug, Hash)]
+struct State {
+    positions: Vec<Coord>,  // A A B B C C D D
+}
+
+impl SolverState for State {}
 
 struct Recurser {
     moves: HashMap<(Coord, Coord), Vec<Coord>>,
@@ -40,13 +46,6 @@ struct Recurser {
     grid: Grid<char>,
     verbose: bool,
 }
-
-#[derive(PartialEq, Eq, Clone, Ord, PartialOrd, Debug, Hash)]
-struct State {
-    positions: Vec<Coord>,  // A A B B C C D D
-}
-
-const MAX_COST: i32 = i32::MAX - 1;
 
 impl Recurser {
     pub fn new(grid: &Grid<char>, costs: HashMap<char, i32>, pchars: Vec<char>) -> Self {
@@ -62,67 +61,34 @@ impl Recurser {
         };
     }
 
-    fn execute_bfs(&self, state: &State) -> i32 {
-        let mut working = Vec::new();
-        working.push((state.clone(), 0));
-        while !working.is_empty() {
-            let (cur, cost) = working.remove(0);
-            if self.is_finished(&cur) {
-                return cost;
-            }
-
-            let possible_moves = self.gen_possible_moves(state);
-            if self.verbose {
-                println!("For {:?}, generated {} moves", state, possible_moves.len());
-            }
-            working.extend(possible_moves.into_iter().map(|(c, s)| (s, c + cost)));
+    // this isn't our room, or someone else is here
+    fn in_bad_room(&self, pos: Coord, ch: char, state: &State) -> bool {
+        let dests = self.destinations.get(&ch).unwrap();
+        if !dests.contains(&pos) {
+            return true;
         }
-
-        panic!("Couldn't find solution?");
+        let others: HashSet<Coord> = state.positions.iter().zip(self.pchars.iter()).filter_map(|(p, oc)| if *oc != ch { Some(*p) } else { None }).collect();
+        return others.intersection(&dests).count() > 0;
     }
 
-    fn execute_dfs(&self, state: &State, cur_cost: i32, best_cost: i32, cache: &mut HashMap<State, (i32, i32)>) -> i32 {
-        if self.is_finished(state) {
-            println!("Found finish state with cost {}", cur_cost);
-            return cur_cost;
+    fn in_hallway(&self, pos: Coord) -> bool {
+        return self.hallways.contains(&pos);
+    }
+
+    fn can_walk_to(&self, pos: Coord, ch: char, dest: Coord, state: &State) -> Option<i32> {
+        // can we walk there without bumping into people, returns cost
+        let moves = self.moves.get(&(pos, dest)).unwrap();
+        let others: HashSet<Coord> = state.positions.iter().map(|p| *p).collect();
+        if moves.iter().any(|m| others.contains(m)) {
+            return None;
         }
+        return Some(moves.len() as i32 * self.costs.get(&ch).unwrap());
+    }
+}
 
-        if let Some((cost_to, total)) = cache.get(state) {
-            if *cost_to <= cur_cost {
-                return *total;
-            }
-        }
-
-        if self.verbose {
-            self.print_state(state);
-        }
-
-        let mut possible_moves = self.gen_possible_moves(state);
-        possible_moves.sort();
-        if self.verbose {
-            println!("For {:?}, generated {} moves", state, possible_moves.len());
-        }
-
-        if self.verbose && possible_moves.is_empty() {
-            println!("Stuck:");
-            self.print_state(state);
-        }
-
-        let mut pbest = best_cost;
-        for (pcost, pstate) in &possible_moves {
-            let pcur = cur_cost + *pcost;
-            if pcur > pbest {
-                continue;
-            }
-            let ptot = self.execute_dfs(pstate, pcur, pbest, cache);
-            if ptot <= pbest {
-                pbest = ptot;
-            }
-        }
-
-        cache.insert(state.clone(), (cur_cost, pbest));
-
-        return pbest;
+impl SolverBase<State> for Recurser {
+    fn is_verbose(&self) -> bool {
+        return self.verbose;
     }
 
     fn is_finished(&self, state: &State) -> bool {
@@ -177,30 +143,6 @@ impl Recurser {
             }
         }
         return ret;
-    }
-
-    // this isn't our room, or someone else is here
-    fn in_bad_room(&self, pos: Coord, ch: char, state: &State) -> bool {
-        let dests = self.destinations.get(&ch).unwrap();
-        if !dests.contains(&pos) {
-            return true;
-        }
-        let others: HashSet<Coord> = state.positions.iter().zip(self.pchars.iter()).filter_map(|(p, oc)| if *oc != ch { Some(*p) } else { None }).collect();
-        return others.intersection(&dests).count() > 0;
-    }
-
-    fn in_hallway(&self, pos: Coord) -> bool {
-        return self.hallways.contains(&pos);
-    }
-
-    fn can_walk_to(&self, pos: Coord, ch: char, dest: Coord, state: &State) -> Option<i32> {
-        // can we walk there without bumping into people, returns cost
-        let moves = self.moves.get(&(pos, dest)).unwrap();
-        let others: HashSet<Coord> = state.positions.iter().map(|p| *p).collect();
-        if moves.iter().any(|m| others.contains(m)) {
-            return None;
-        }
-        return Some(moves.len() as i32 * self.costs.get(&ch).unwrap());
     }
 
     fn print_state(&self, state: &State) {

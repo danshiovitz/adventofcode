@@ -5,69 +5,10 @@ use lazy_regex::regex;
 extern crate common;
 
 use common::framework::{parse_lines, run_day, BaseDay, InputReader};
-use common::solver::{FlagManager, FlagSet, Trid};
+use common::solver::{FlagManager, FlagSet, SolverBase, SolverState, Trid, count_all_paths_dfs};
 
 struct Day12 {
     cxns: HashMap<String, Vec<String>>,
-}
-
-#[allow(dead_code)]
-fn find_paths(
-    cxns: &HashMap<String, Vec<String>>,
-    start: &str,
-    end: &str,
-    allow_extra: bool,
-) -> Vec<Vec<String>> {
-    struct WorkItem {
-        steps: Vec<String>,
-        seen: HashSet<String>,
-        extra: Option<String>,
-    }
-
-    let mut completed = Vec::new();
-    let mut working = vec![WorkItem {
-        steps: vec![start.to_owned()],
-        seen: HashSet::from([start.to_owned()]),
-        extra: None,
-    }];
-    while !working.is_empty() {
-        let cur = working.remove(0);
-        let cur_step = &cur.steps[cur.steps.len() - 1];
-        let others = cxns.get(cur_step).unwrap();
-        for other in others {
-            let mut use_extra = false;
-            if cur.seen.contains(other) {
-                if other != "start" && cur.extra.is_none() && allow_extra {
-                    use_extra = true;
-                } else {
-                    continue;
-                }
-            }
-
-            let mut other_item = WorkItem {
-                steps: cur.steps.clone(),
-                seen: cur.seen.clone(),
-                extra: if use_extra {
-                    Some(other.clone())
-                } else {
-                    cur.extra.clone()
-                },
-            };
-            other_item.steps.push(other.clone());
-
-            if other == end {
-                completed.push(other_item.steps.clone());
-                continue;
-            }
-
-            if other.chars().next().unwrap().is_ascii_lowercase() {
-                other_item.seen.insert(other.clone());
-            }
-
-            working.push(other_item);
-        }
-    }
-    return completed;
 }
 
 fn find_paths_dfs(
@@ -75,7 +16,7 @@ fn find_paths_dfs(
     start: &str,
     end: &str,
     allow_extra: bool,
-) -> Vec<Vec<String>> {
+) -> i32 {
     let seen_mgr = FlagManager::from(cxns.keys().map(|s| s.as_str()));
 
     let start_id = seen_mgr.translate(start);
@@ -117,18 +58,18 @@ fn find_paths_dfs(
         seen_mgr: seen_mgr,
     };
 
-    let path_count = recurser.execute(state, &mut HashMap::new());
-    return (0..path_count)
-        .map(|_| vec!["start".to_owned(), "end".to_owned()])
-        .collect();
+    return count_all_paths_dfs(&recurser, &state);
 }
 
-#[derive(Clone, Hash, PartialEq, Eq)]
+
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
 struct State {
     step: Trid,
     seen: FlagSet,
     used_extra: bool,
 }
+
+impl SolverState for State {}
 
 struct Recurser {
     cxns: HashMap<Trid, Vec<Trid>>,
@@ -139,17 +80,17 @@ struct Recurser {
     seen_mgr: FlagManager,
 }
 
-impl Recurser {
-    fn execute(&self, state: State, cache: &mut HashMap<State, i32>) -> i32 {
-        if state.step == self.end {
-            return 1;
-        }
+impl SolverBase<State> for Recurser {
+    fn is_verbose(&self) -> bool {
+        return false;
+    }
 
-        if let Some(found) = cache.get(&state) {
-            return *found;
-        }
+    fn is_finished(&self, state: &State) -> bool {
+        return state.step == self.end;
+    }
 
-        let mut ret = 0;
+    fn gen_possible_moves(&self, state: &State) -> Vec<(i32, State)> {
+        let mut ret: Vec<(i32, State)> = vec![];
 
         let others = self.cxns.get(&state.step).unwrap();
         for other in others {
@@ -161,7 +102,7 @@ impl Recurser {
                         seen: state.seen,
                         used_extra: true,
                     };
-                    ret += self.execute(new_state, cache);
+                    ret.push((1, new_state));
                 }
                 continue;
             }
@@ -175,12 +116,14 @@ impl Recurser {
             if !self.reusable.contains(&other) {
                 self.seen_mgr.set(&mut new_state.seen, other);
             }
-            ret += self.execute(new_state, cache);
+            ret.push((1, new_state));
         }
-
-        cache.insert(state, ret);
-
         return ret;
+    }
+
+    fn print_state(&self, state: &State) {
+        println!("{:?}", state);
+        println!();
     }
 }
 
@@ -208,19 +151,13 @@ impl BaseDay for Day12 {
     }
 
     fn pt1(&mut self) -> String {
-        let paths = find_paths_dfs(&self.cxns, "start", "end", false);
-        // for p in &paths {
-        //     println!("{:?}", p);
-        // }
-        return paths.len().to_string();
+        let num_paths = find_paths_dfs(&self.cxns, "start", "end", false);
+        return num_paths.to_string();
     }
 
     fn pt2(&mut self) -> String {
-        let paths = find_paths_dfs(&self.cxns, "start", "end", true);
-        // for p in &paths {
-        //     println!("{:?}", p);
-        // }
-        return paths.len().to_string();
+        let num_paths = find_paths_dfs(&self.cxns, "start", "end", true);
+        return num_paths.to_string();
     }
 }
 
