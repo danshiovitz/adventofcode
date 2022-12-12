@@ -1,9 +1,11 @@
-use lazy_regex::regex;
+use lazy_regex::{regex, Captures, Lazy, Regex};
 use std::collections::HashMap;
 
 extern crate common;
 
-use common::framework::{parse_records, run_day, BaseDay, InputReader};
+use common::framework::{
+    parse_records, parse_regexp, parse_regexps, parse_vals, run_day, BaseDay, InputReader,
+};
 
 #[derive(Debug)]
 enum Op {
@@ -76,85 +78,52 @@ fn run_rounds(monkeys: &Vec<Monkey>, less_worry: bool, rounds: i32) -> i64 {
 impl BaseDay for Day11 {
     fn parse(&mut self, input: &mut InputReader) {
         fn parse_exp(exp: &str) -> Op {
-            match regex!(r#"old\s*\+\s*(\d+)"#).captures(&exp) {
-                Some(c) => {
-                    return Op::Add(c[1].parse::<i64>().unwrap());
-                }
-                None => {}
-            }
-            match regex!(r#"old\s*\*\s*(\d+)"#).captures(&exp) {
-                Some(c) => {
-                    return Op::Mult(c[1].parse::<i64>().unwrap());
-                }
-                None => {}
-            }
-            match regex!(r#"old\s*\*\s*old"#).captures(&exp) {
-                Some(_) => {
-                    return Op::Square();
-                }
-                None => {}
-            }
-            panic!("Bad exp: {}", exp);
+            let mut parsers: Vec<(&Lazy<Regex>, Box<dyn FnMut(Captures) -> Op>)> = vec![
+                (
+                    regex!(r#"old\s*\+\s*(\d+)"#),
+                    Box::new(move |c: Captures| Op::Add(c[1].parse::<i64>().unwrap())),
+                ),
+                (
+                    regex!(r#"old\s*\*\s*(\d+)"#),
+                    Box::new(move |c: Captures| Op::Mult(c[1].parse::<i64>().unwrap())),
+                ),
+                (
+                    regex!(r#"old\s*\*\s*old"#),
+                    Box::new(move |_c: Captures| Op::Square()),
+                ),
+            ];
+            return parse_regexps(exp, &mut parsers);
         }
 
         fn parse_monkey(lines: &Vec<String>) -> Monkey {
-            let mut items = Vec::new();
-            match regex!(r#"\s*Starting items:\s*(.*)"#).captures(&lines[1]) {
-                Some(c) => {
-                    let sep = regex!(r#"\s*,\s*"#);
-                    let ws = sep.split(c[1].trim());
-                    items.extend(ws.map(|n| n.parse::<i64>().unwrap()));
-                }
-                None => {
-                    panic!("Bad line 1: {}", lines[1]);
-                }
-            }
-
-            let op: Op;
-            match regex!(r#"\s*Operation:\s*new\s*=\s*(.*)"#).captures(&lines[2]) {
-                Some(c) => {
-                    op = parse_exp(&c[1]);
-                }
-                None => {
-                    panic!("Bad line 2: {}", lines[2]);
-                }
-            }
-
-            let test_by: i64;
-            match regex!(r#"\s*Test:\s+divisible\s+by\s+(\d+)"#).captures(&lines[3]) {
-                Some(c) => {
-                    test_by = c[1].parse::<i64>().unwrap();
-                }
-                None => {
-                    panic!("Bad line 3: {}", lines[3]);
-                }
-            }
-
-            let test_true: usize;
-            match regex!(r#"\s*If\s+true:\s+throw\s+to\s+monkey\s+(\d+)"#).captures(&lines[4]) {
-                Some(c) => {
-                    test_true = c[1].parse::<usize>().unwrap();
-                }
-                None => {
-                    panic!("Bad line 4: {}", lines[4]);
-                }
-            }
-
-            let test_false: usize;
-            match regex!(r#"\s*If\s+false:\s+throw\s+to\s+monkey\s+(\d+)"#).captures(&lines[5]) {
-                Some(c) => {
-                    test_false = c[1].parse::<usize>().unwrap();
-                }
-                None => {
-                    panic!("Bad line 5: {}", lines[5]);
-                }
-            }
-
             Monkey {
-                items: items,
-                op: op,
-                test_by: test_by,
-                test_to: (test_true, test_false),
+                items: parse_regexp(
+                    &lines[1],
+                    regex!(r#"\s*Starting items:\s*(.*)"#),
+                    &mut |c: Captures| parse_vals::<i64>(&c[1]),
+                ),
+                op: parse_regexp(
+                    &lines[2],
+                    regex!(r#"\s*Operation:\s*new\s*=\s*(.*)"#),
+                    &mut |c: Captures| parse_exp(&c[1]),
+                ),
+                test_by: parse_regexp(
+                    &lines[3],
+                    regex!(r#"\s*Test:\s+divisible\s+by\s+(\d+)"#),
+                    &mut |c: Captures| c[1].parse::<i64>().unwrap(),
+                ),
+                test_to: (
+                    parse_regexp(
+                        &lines[4],
+                        regex!(r#"\s*If\s+true:\s+throw\s+to\s+monkey\s+(\d+)"#),
+                        &mut |c: Captures| c[1].parse::<usize>().unwrap(),
+                    ),
+                    parse_regexp(
+                        &lines[5],
+                        regex!(r#"\s*If\s+false:\s+throw\s+to\s+monkey\s+(\d+)"#),
+                        &mut |c: Captures| c[1].parse::<usize>().unwrap(),
+                    ),
+                ),
             }
         }
 

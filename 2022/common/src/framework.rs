@@ -1,9 +1,11 @@
 use std::boxed::Box;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
+use std::str::FromStr;
 
-use lazy_regex::regex;
+use lazy_regex::{regex, Captures, Lazy, Regex};
 
 use crate::grid::{Coord, Grid};
 
@@ -14,6 +16,39 @@ pub trait BaseDay {
     fn setup(&mut self) {}
     fn pt1(&mut self) -> String;
     fn pt2(&mut self) -> String;
+}
+
+pub fn parse_regexps<F, T>(line: &str, rexes: &mut Vec<(&Lazy<Regex>, F)>) -> T
+where
+    F: FnMut(Captures) -> T,
+{
+    for (rex, func) in rexes {
+        match rex.captures(line) {
+            Some(c) => {
+                return func(c);
+            }
+            None => {}
+        }
+    }
+
+    panic!("Can't parse line: {}", line);
+}
+
+pub fn parse_regexp<F, T>(line: &str, rex: &Lazy<Regex>, func: &mut F) -> T
+where
+    F: FnMut(Captures) -> T,
+{
+    return parse_regexps(line, &mut vec![(rex, func)]);
+}
+
+pub fn parse_vals<T>(line: &str) -> Vec<T>
+where
+    T: FromStr,
+    <T as FromStr>::Err: Debug,
+{
+    let sep = regex!(r#"\s*,\s*"#);
+    let ws = sep.split(line.trim());
+    return ws.map(|n| n.parse::<T>().unwrap()).collect::<Vec<T>>();
 }
 
 pub fn parse_lines<F, T>(input: &mut InputReader, parse_line: &mut F) -> Vec<T>
@@ -34,16 +69,13 @@ where
 // Potentially reads multiple lines, but accumulates into a single
 // vec of numbers. Stops if it sees a blank line (which it consumes).
 pub fn parse_numbers(input: &mut InputReader) -> Vec<i32> {
-    let sep = regex!(r#"\s*,\s*"#);
-
     let mut vals = Vec::new();
     for line in input.lines() {
         let line = line.unwrap();
         if line.is_empty() {
             return vals;
         }
-        let ws = sep.split(line.trim());
-        vals.extend(ws.map(|n| n.parse::<i32>().unwrap()));
+        vals.extend(parse_vals::<i32>(&line));
     }
     return vals;
 }
