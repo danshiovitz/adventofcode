@@ -179,11 +179,20 @@ where
 {
     let mut working = Vec::new();
     working.push((start_state.clone(), 0));
+
+    let mut visited = HashMap::new();
+
     while !working.is_empty() {
         let (cur, cost) = working.remove(0);
         if solver.is_finished(&cur) {
             return cost;
         }
+        if let Some(existing_cost) = visited.get(&cur) {
+            if cost >= *existing_cost {
+                continue;
+            }
+        }
+        visited.insert(cur.clone(), cost);
 
         let possible_moves = solver.gen_possible_moves(&cur);
         if solver.is_verbose() {
@@ -192,7 +201,7 @@ where
         working.extend(possible_moves.into_iter().map(|(c, s)| (s, c + cost)));
     }
 
-    panic!("Couldn't find solution?");
+    return solver.cant_solve();
 }
 
 pub trait SolverBase<S> {
@@ -203,6 +212,9 @@ pub trait SolverBase<S> {
     fn is_verbose(&self) -> bool;
     fn max_cost(&self) -> i32 {
         return i32::MAX - 1;
+    }
+    fn cant_solve(&self) -> i32 {
+        panic!("Couldn't find solution?");
     }
 }
 
