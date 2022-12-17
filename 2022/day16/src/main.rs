@@ -103,15 +103,19 @@ fn release_max_pressure(nodes: &Vec<Node>, max_cost: i32, num_actors: i32) -> i3
         remaining_cost: i32,
         active_flow: i32,
         visited: Vec<bool>,
+        // min_idx = tuple where the first item is the remaining cost when the min_idx
+        // was set, which causes it to be auto-invalidated when the turn advances
+        min_idx: (i32, usize),
     }
 
-    fn recur(s: &mut State, infos: &Vec<Info>) -> (i32, Vec<Vec<String>>) {
+    fn recur(s: &mut State, infos: &Vec<Info>) -> (i32, Vec<Vec<String>>, i64) {
         let mut best_flow = 0;
         let mut best_paths = s
             .actors
             .iter()
             .map(|_| Vec::new())
             .collect::<Vec<Vec<String>>>();
+        let mut explored = 1;
 
         let mut travel_flow = 0;
         let mut turns = 0;
@@ -138,7 +142,7 @@ fn release_max_pressure(nodes: &Vec<Node>, max_cost: i32, num_actors: i32) -> i3
             // Pick a new thing to do
             let mut did_something = false;
             for i in 1..infos.len() {
-                if i == s.actors[a].loc || s.visited[i] {
+                if i == s.actors[a].loc || s.visited[i] || (s.remaining_cost == s.min_idx.0 && i < s.min_idx.1) {
                     continue;
                 }
 
@@ -155,8 +159,10 @@ fn release_max_pressure(nodes: &Vec<Node>, max_cost: i32, num_actors: i32) -> i3
                 s.actors[a].delay = travel_cost;
                 // we mark it visited immediately so other actors won't try to go there
                 s.visited[i] = true;
+                let old_min_idx = s.min_idx;
+                s.min_idx = (s.remaining_cost, i + 1);
 
-                let (recur_flow, recur_paths) = recur(s, infos);
+                let (recur_flow, recur_paths, recur_explored) = recur(s, infos);
                 let recur_flow = travel_flow + recur_flow;
                 if recur_flow > best_flow {
                     best_flow = recur_flow;
@@ -164,8 +170,10 @@ fn release_max_pressure(nodes: &Vec<Node>, max_cost: i32, num_actors: i32) -> i3
                     best_paths[a]
                         .insert(0, format!("{} minutes to {}", travel_cost, infos[i].name));
                 }
+                explored += recur_explored;
 
                 // now undo the previous moves
+                s.min_idx = old_min_idx;
                 s.visited[i] = false;
                 s.actors[a].delay = 0;
                 s.actors[a].loc = old_loc;
@@ -176,16 +184,17 @@ fn release_max_pressure(nodes: &Vec<Node>, max_cost: i32, num_actors: i32) -> i3
                 s.actors[a].loc = 0;
                 s.actors[a].delay = s.remaining_cost;
 
-                let (recur_flow, recur_paths);
+                let (recur_flow, recur_paths, recur_explored);
                 if s.remaining_cost > 0 {
-                    (recur_flow, recur_paths) = recur(s, infos);
+                    (recur_flow, recur_paths, recur_explored) = recur(s, infos);
                 } else {
-                    (recur_flow, recur_paths) = (
+                    (recur_flow, recur_paths, recur_explored) = (
                         0,
                         s.actors
                             .iter()
                             .map(|_| Vec::new())
                             .collect::<Vec<Vec<String>>>(),
+                        0,
                     );
                 }
                 let recur_flow = travel_flow + recur_flow;
@@ -193,9 +202,10 @@ fn release_max_pressure(nodes: &Vec<Node>, max_cost: i32, num_actors: i32) -> i3
                     best_flow = recur_flow;
                     best_paths = recur_paths;
                     if s.remaining_cost > 0 {
-                        best_paths[a].insert(0, "...".to_string());
+                        best_paths[a].insert(0, format!("idle for last {} minutes", s.remaining_cost));
                     }
                 }
+                explored += recur_explored;
 
                 // now undo the previous moves
                 s.actors[a].delay = 0;
@@ -209,13 +219,13 @@ fn release_max_pressure(nodes: &Vec<Node>, max_cost: i32, num_actors: i32) -> i3
             }
             s.active_flow = old_active_flow;
 
-            return (best_flow, best_paths);
+            return (best_flow, best_paths, explored);
         }
 
         panic!("Something weird happened!");
     }
 
-    let (best_flow, best_paths) = recur(
+    let (best_flow, best_paths, explored) = recur(
         &mut State {
             actors: (0..num_actors)
                 .map(|_| Actor { loc: 0, delay: 0 })
@@ -223,10 +233,11 @@ fn release_max_pressure(nodes: &Vec<Node>, max_cost: i32, num_actors: i32) -> i3
             remaining_cost: max_cost,
             active_flow: 0,
             visited: infos.iter().map(|n| n.name == "AA").collect::<Vec<bool>>(),
+            min_idx: (-1, 0),
         },
         &infos,
     );
-    println!("Final best paths: {} {:?}", best_flow, best_paths);
+    println!("Final best paths (explored {}): {} {:?}", explored, best_flow, best_paths);
     return best_flow;
 }
 
