@@ -142,7 +142,10 @@ fn release_max_pressure(nodes: &Vec<Node>, max_cost: i32, num_actors: i32) -> i3
             // Pick a new thing to do
             let mut did_something = false;
             for i in 1..infos.len() {
-                if i == s.actors[a].loc || s.visited[i] || (s.remaining_cost == s.min_idx.0 && i < s.min_idx.1) {
+                if i == s.actors[a].loc
+                    || s.visited[i]
+                    || (s.remaining_cost == s.min_idx.0 && i < s.min_idx.1)
+                {
                     continue;
                 }
 
@@ -202,7 +205,8 @@ fn release_max_pressure(nodes: &Vec<Node>, max_cost: i32, num_actors: i32) -> i3
                     best_flow = recur_flow;
                     best_paths = recur_paths;
                     if s.remaining_cost > 0 {
-                        best_paths[a].insert(0, format!("idle for last {} minutes", s.remaining_cost));
+                        best_paths[a]
+                            .insert(0, format!("idle for last {} minutes", s.remaining_cost));
                     }
                 }
                 explored += recur_explored;
@@ -237,7 +241,10 @@ fn release_max_pressure(nodes: &Vec<Node>, max_cost: i32, num_actors: i32) -> i3
         },
         &infos,
     );
-    println!("Final best paths (explored {}): {} {:?}", explored, best_flow, best_paths);
+    println!(
+        "Final best paths (explored {}): {} {:?}",
+        explored, best_flow, best_paths
+    );
     return best_flow;
 }
 

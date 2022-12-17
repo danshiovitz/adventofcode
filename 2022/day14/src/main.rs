@@ -91,26 +91,7 @@ impl BaseDay for Day14 {
                 .extend(parse_line(&line).into_iter().map(|c| (c, '#')))
         });
 
-        let mut min_x = i32::MAX;
-        let mut min_y = i32::MAX;
-        let mut max_x = i32::MIN;
-        let mut max_y = i32::MIN;
-        for coord in self.vals.coords.keys() {
-            if coord.x < min_x {
-                min_x = coord.x;
-            }
-            if coord.y < min_y {
-                min_y = coord.y;
-            }
-            if coord.x > max_x {
-                max_x = coord.x;
-            }
-            if coord.y > max_y {
-                max_y = coord.y;
-            }
-        }
-        self.vals.min = Coord { x: min_x, y: min_y };
-        self.vals.max = Coord { x: max_x, y: max_y };
+        self.vals.recompute_minmax();
     }
 
     fn pt1(&mut self) -> String {

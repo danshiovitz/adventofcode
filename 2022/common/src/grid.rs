@@ -54,6 +54,29 @@ impl<T> Grid<T> {
             max: Coord { x: 0, y: 0 },
         }
     }
+
+    pub fn recompute_minmax(&mut self) {
+        let mut min_x = i32::MAX;
+        let mut min_y = i32::MAX;
+        let mut max_x = i32::MIN;
+        let mut max_y = i32::MIN;
+        for coord in self.coords.keys() {
+            if coord.x < min_x {
+                min_x = coord.x;
+            }
+            if coord.y < min_y {
+                min_y = coord.y;
+            }
+            if coord.x > max_x {
+                max_x = coord.x;
+            }
+            if coord.y > max_y {
+                max_y = coord.y;
+            }
+        }
+        self.min = Coord { x: min_x, y: min_y };
+        self.max = Coord { x: max_x, y: max_y };
+    }
 }
 
 pub fn four_neighbors(coord: &Coord) -> Vec<Coord> {
