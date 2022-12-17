@@ -1,3 +1,4 @@
+use lazy_regex::regex;
 use std::collections::{HashMap, HashSet};
 
 use crate::solver::SolverState;
@@ -6,6 +7,22 @@ use crate::solver::SolverState;
 pub struct Coord {
     pub x: i32,
     pub y: i32,
+}
+
+impl Coord {
+    pub fn parse(val: &str) -> Coord {
+        match regex!(r#"(\d+)\s*,\s*(\d+)"#).captures(val) {
+            Some(c) => {
+                return Coord {
+                    x: c[1].parse::<i32>().unwrap(),
+                    y: c[2].parse::<i32>().unwrap(),
+                }
+            }
+            None => {
+                panic!("Bad value for coord: {}", val);
+            }
+        }
+    }
 }
 
 impl SolverState for Coord {}
