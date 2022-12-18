@@ -1,8 +1,27 @@
+use lazy_regex::regex;
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug, Hash)]
 pub struct Coord3d {
     pub x: i32,
     pub y: i32,
     pub z: i32,
+}
+
+impl Coord3d {
+    pub fn parse(val: &str) -> Coord3d {
+        match regex!(r#"(\d+)\s*,\s*(\d+),\s*(\d+)"#).captures(val) {
+            Some(c) => {
+                return Coord3d {
+                    x: c[1].parse::<i32>().unwrap(),
+                    y: c[2].parse::<i32>().unwrap(),
+                    z: c[3].parse::<i32>().unwrap(),
+                }
+            }
+            None => {
+                panic!("Bad value for coord3d: {}", val);
+            }
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
