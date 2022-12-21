@@ -57,21 +57,21 @@ fn compute_max_geodes(blueprint: &Blueprint, max_turns: i32) -> i32 {
         }
 
         cache.insert(s.clone(), turns);
-/*
-        for t in 0..(better.len() - turns as usize + 1) {
-            for u in 0..better[t].len() {
-                if is_better_than(&better[t][u], &s) {
-                    // println!("State {:?} is worse than existing state (turn {}) {:?}", s, better.len() - t, better[t][u]);
-                    return (-1, Vec::new(), 1);
+        /*
+                for t in 0..(better.len() - turns as usize + 1) {
+                    for u in 0..better[t].len() {
+                        if is_better_than(&better[t][u], &s) {
+                            // println!("State {:?} is worse than existing state (turn {}) {:?}", s, better.len() - t, better[t][u]);
+                            return (-1, Vec::new(), 1);
+                        }
+                    }
                 }
-            }
-        }
 
-        // if we didn't peace out, see if we're better than anything in the current turn
-        let b_idx = better.len() - turns as usize;
-        better[b_idx].retain(|b| !is_better_than(&s, b));
-        better[b_idx].push(s.clone());
-*/
+                // if we didn't peace out, see if we're better than anything in the current turn
+                let b_idx = better.len() - turns as usize;
+                better[b_idx].retain(|b| !is_better_than(&s, b));
+                better[b_idx].push(s.clone());
+        */
 
         // println!("Exporing {:?} - {}", s, turns);
         let mut best_geodes = 0;
@@ -114,13 +114,8 @@ fn compute_max_geodes(blueprint: &Blueprint, max_turns: i32) -> i32 {
                 }
             }
 
-            let (recur_geodes, recur_path, recur_explored) = recur(
-                recur_state.clone(),
-                blueprint,
-                turns - 1,
-                cache,
-                better,
-            );
+            let (recur_geodes, recur_path, recur_explored) =
+                recur(recur_state.clone(), blueprint, turns - 1, cache, better);
             if recur_geodes > best_geodes {
                 best_geodes = recur_geodes;
                 best_path = recur_path;
@@ -156,15 +151,17 @@ fn compute_max_geodes(blueprint: &Blueprint, max_turns: i32) -> i32 {
         &mut cache,
         &mut better,
     );
-    let best_path = best_path.into_iter().map(|rt|
-        match rt {
+    let best_path = best_path
+        .into_iter()
+        .map(|rt| match rt {
             ORE => "build ore",
             CLAY => "build clay",
             OBSIDIAN => "build obsidian",
             GEODE => "build geode",
             NOTHING => "build nothing",
             _ => "build banana",
-        }).collect::<Vec<&str>>();
+        })
+        .collect::<Vec<&str>>();
     println!(
         "Final best path for {} (explored {}): {} {:?}",
         blueprint.id, explored, geode_count, best_path
