@@ -23,15 +23,23 @@ struct Day19 {
 fn compute_max_geodes(blueprint: &Blueprint, max_turns: i32) -> i32 {
     #[derive(Debug, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
     struct State {
-        stores: Vec<i32>,
-        robots: Vec<i32>,
+        stores: [u8; 4],
+        robots: [u8; 4],
     }
 
-    fn is_better_than(s1: &State, s2: &State) -> bool {
-        return (0..4)
-            .any(|idx| s1.stores[idx] > s2.stores[idx] || s1.robots[idx] > s2.robots[idx])
-            && (0..4)
-                .all(|idx| s1.stores[idx] >= s2.stores[idx] && s1.robots[idx] >= s2.robots[idx]);
+    fn max_better(s: &State, turns: i32) -> u8 {
+        let mut b = s.stores[GEODE];
+        let mut r = s.robots[GEODE];
+        let mut t = turns;
+        while t > 0 {
+            b += r;
+            r += 1;
+            t -= 1;
+            if b > 200 {
+                return 200;
+            }
+        }
+        return b;
     }
 
     fn recur(
@@ -39,8 +47,8 @@ fn compute_max_geodes(blueprint: &Blueprint, max_turns: i32) -> i32 {
         blueprint: &Blueprint,
         turns: i32,
         cache: &mut HashMap<State, i32>,
-        better: &mut Vec<Vec<State>>,
-    ) -> (i32, Vec<usize>, i32) {
+        better: &mut Vec<u8>,
+    ) -> (u8, Vec<usize>, i32) {
         if turns == 0 {
             // println!("Turn zero for {:?}", s);
             return (s.stores[GEODE], Vec::new(), 1);
@@ -52,26 +60,16 @@ fn compute_max_geodes(blueprint: &Blueprint, max_turns: i32) -> i32 {
         if let Some(cache_turns) = cache.get(&s) {
             if *cache_turns >= turns {
                 // println!("State {:?} is cached", s);
-                return (-1, Vec::new(), 1);
+                return (0, Vec::new(), 1);
             }
         }
-
         cache.insert(s.clone(), turns);
-        /*
-                for t in 0..(better.len() - turns as usize + 1) {
-                    for u in 0..better[t].len() {
-                        if is_better_than(&better[t][u], &s) {
-                            // println!("State {:?} is worse than existing state (turn {}) {:?}", s, better.len() - t, better[t][u]);
-                            return (-1, Vec::new(), 1);
-                        }
-                    }
-                }
 
-                // if we didn't peace out, see if we're better than anything in the current turn
-                let b_idx = better.len() - turns as usize;
-                better[b_idx].retain(|b| !is_better_than(&s, b));
-                better[b_idx].push(s.clone());
-        */
+        let mbv = max_better(&s, turns);
+        if mbv < better[better.len() - turns as usize] {
+            // println!("Couldn't improve on {} (only {}) by turn {}", better[better.len() - turns as usize], mbv, turns);
+            return (0, Vec::new(), 1);
+        }
 
         // println!("Exporing {:?} - {}", s, turns);
         let mut best_geodes = 0;
@@ -87,24 +85,24 @@ fn compute_max_geodes(blueprint: &Blueprint, max_turns: i32) -> i32 {
                     continue;
                 }
 
-                if !(0..4).all(|i| recur_state.stores[i] >= blueprint.costs[rt][i]) {
+                if !(0..4).all(|i| recur_state.stores[i] >= blueprint.costs[rt][i] as u8) {
                     continue;
                 }
                 if rt == OBSIDIAN || rt == CLAY {
-                    let max_needed = blueprint.costs.iter().map(|tc| tc[rt]).max().unwrap();
+                    let max_needed = blueprint.costs.iter().map(|tc| tc[rt] as u8).max().unwrap();
                     if recur_state.stores[rt] > max_needed * 2 {
                         continue;
                     }
                 }
                 if rt == ORE {
-                    let max_needed = blueprint.costs.iter().map(|tc| tc[rt]).max().unwrap();
-                    let eog_needed = (max_needed - recur_state.robots[rt]) * turns;
+                    let max_needed = blueprint.costs.iter().map(|tc| tc[rt] as u8).max().unwrap();
+                    let eog_needed = (max_needed - recur_state.robots[rt]) * turns as u8;
                     if recur_state.stores[rt] > eog_needed {
                         continue;
                     }
                 }
                 for i in 0..4 {
-                    recur_state.stores[i] -= blueprint.costs[rt][i];
+                    recur_state.stores[i] -= blueprint.costs[rt][i] as u8;
                     recur_state.stores[i] += recur_state.robots[i];
                 }
                 recur_state.robots[rt] += 1;
@@ -120,6 +118,11 @@ fn compute_max_geodes(blueprint: &Blueprint, max_turns: i32) -> i32 {
                 best_geodes = recur_geodes;
                 best_path = recur_path;
                 best_path.insert(0, rt);
+
+                let blen = better.len();
+                if best_geodes > better[blen - turns as usize] {
+                    better[blen - turns as usize] = best_geodes;
+                }
             }
             explored += recur_explored;
 
@@ -128,7 +131,7 @@ fn compute_max_geodes(blueprint: &Blueprint, max_turns: i32) -> i32 {
                 recur_state.robots[rt] -= 1;
                 for i in 0..4 {
                     recur_state.stores[i] -= recur_state.robots[i];
-                    recur_state.stores[i] += blueprint.costs[rt][i];
+                    recur_state.stores[i] += blueprint.costs[rt][i] as u8;
                 }
             } else {
                 for i in 0..4 {
@@ -141,11 +144,9 @@ fn compute_max_geodes(blueprint: &Blueprint, max_turns: i32) -> i32 {
     }
 
     let mut cache = HashMap::new();
-    let mut better = (0..max_turns)
-        .map(|_| Vec::new())
-        .collect::<Vec<Vec<State>>>();
+    let mut better = (0..max_turns).map(|_| 0).collect::<Vec<u8>>();
     let (geode_count, best_path, explored) = recur(
-        State { stores: vec![0, 0, 0, 0], robots: vec![1, 0, 0, 0] },
+        State { stores: [0; 4], robots: [1, 0, 0, 0] },
         &blueprint,
         max_turns,
         &mut cache,
@@ -166,7 +167,7 @@ fn compute_max_geodes(blueprint: &Blueprint, max_turns: i32) -> i32 {
         "Final best path for {} (explored {}): {} {:?}",
         blueprint.id, explored, geode_count, best_path
     );
-    return geode_count;
+    return geode_count as i32;
 }
 
 impl BaseDay for Day19 {
