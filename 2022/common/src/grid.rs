@@ -221,6 +221,14 @@ pub fn add_direction_wrapped<T>(start: &Coord, dir: &Direction, grid: &Grid<T>) 
     }
 }
 
+// Rotate this coordinate clockwise as though it's in a square of given size
+pub fn rotate_right(coord: &Coord, size: i32) -> Coord {
+    if coord.x < 0 || coord.x >= size || coord.y < 0 || coord.y >= size {
+        panic!("Coord {:?} out of range for size {}", coord, size);
+    }
+    return Coord { x: size - 1 - coord.y, y: coord.x };
+}
+
 pub fn manhattan(start: &Coord, end: &Coord) -> i32 {
     return (end.x - start.x).abs() + (end.y - start.y).abs();
 }
