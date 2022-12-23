@@ -106,12 +106,29 @@ pub fn parse_grid<F, T>(input: &mut InputReader, parse_coord: &mut F) -> Grid<T>
 where
     F: FnMut(char, &Coord) -> Option<T>,
 {
+    return parse_grid_record(input, false, parse_coord);
+}
+
+pub fn parse_grid_record<F, T>(
+    input: &mut InputReader,
+    end_on_blank: bool,
+    parse_coord: &mut F,
+) -> Grid<T>
+where
+    F: FnMut(char, &Coord) -> Option<T>,
+{
     let mut coords: HashMap<Coord, T> = HashMap::new();
     let mut max_x = 0;
     let mut max_y = 0;
     for (y, line) in input.lines().enumerate() {
+        let line = line.unwrap();
+
+        if line.len() == 0 && end_on_blank {
+            break;
+        }
+
         let y = y as i32;
-        for (x, ch) in line.unwrap().chars().enumerate() {
+        for (x, ch) in line.chars().enumerate() {
             let x = x as i32;
             let coord = Coord { x: x, y: y };
             match parse_coord(ch, &coord) {

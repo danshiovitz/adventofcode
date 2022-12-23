@@ -27,13 +27,13 @@ impl Coord {
 
 impl SolverState for Coord {}
 
-#[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug, Hash)]
 pub struct Direction {
     pub dx: i32,
     pub dy: i32,
 }
 
-#[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug, Hash)]
 pub struct Line {
     pub start: Coord,
     pub end: Coord,
@@ -183,6 +183,36 @@ pub fn add_direction(start: &Coord, dir: &Direction) -> Coord {
     return Coord { x: start.x + dir.dx, y: start.y + dir.dy };
 }
 
+pub fn add_direction_wrapped<T>(start: &Coord, dir: &Direction, grid: &Grid<T>) -> Coord {
+    let mut cur = *start;
+    loop {
+        cur = add_direction(&cur, dir);
+        if grid.coords.contains_key(&cur) {
+            return cur;
+        }
+
+        if cur.x > grid.max.x {
+            cur.x = grid.min.x - 1;
+        } else if cur.x < grid.min.x {
+            cur.x = grid.max.x + 1;
+        }
+
+        if cur.y > grid.max.y {
+            cur.y = grid.min.y - 1;
+        } else if cur.y < grid.min.y {
+            cur.y = grid.max.y + 1;
+        }
+    }
+}
+
 pub fn manhattan(start: &Coord, end: &Coord) -> i32 {
     return (end.x - start.x).abs() + (end.y - start.y).abs();
+}
+
+pub fn turn_left(dir: &Direction) -> Direction {
+    return Direction { dx: dir.dy, dy: -dir.dx };
+}
+
+pub fn turn_right(dir: &Direction) -> Direction {
+    return Direction { dx: -dir.dy, dy: dir.dx };
 }
