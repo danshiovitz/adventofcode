@@ -46,13 +46,29 @@ pub struct Grid<T> {
     pub max: Coord,
 }
 
-impl<T> Grid<T> {
+impl<T> Grid<T>
+where
+    T: Copy,
+{
     pub fn new() -> Self {
         Grid {
             coords: HashMap::new(),
             min: Coord { x: 0, y: 0 },
             max: Coord { x: 0, y: 0 },
         }
+    }
+
+    pub fn from_set(coords: &HashSet<Coord>, val: T) -> Self {
+        let mut grid = Grid {
+            coords: coords
+                .into_iter()
+                .map(|c| (*c, val))
+                .collect::<HashMap<Coord, T>>(),
+            min: Coord { x: 0, y: 0 },
+            max: Coord { x: 0, y: 0 },
+        };
+        grid.recompute_minmax();
+        return grid;
     }
 
     pub fn recompute_minmax(&mut self) {
