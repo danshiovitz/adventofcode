@@ -177,14 +177,33 @@ pub fn cost_minimizing_bfs<S>(solver: &dyn SolverBase<S>, start_state: &S) -> i3
 where
     S: SolverState,
 {
+    let is_verbose = solver.is_verbose();
+    let accrue_path = |state: &S, old_path: &Option<Vec<S>>| -> Option<Vec<S>> {
+        if old_path.is_none() {
+            return None;
+        } else {
+            let mut path = old_path.clone().unwrap();
+            path.push(state.clone());
+            return Some(path);
+        }
+    };
+
     let mut working = Vec::new();
-    working.push((start_state.clone(), 0));
+    let start_path = if is_verbose {
+        Some(vec![start_state.clone()])
+    } else {
+        None
+    };
+    working.push((start_state.clone(), start_path, 0));
 
     let mut visited = HashMap::new();
 
     while !working.is_empty() {
-        let (cur, cost) = working.remove(0);
+        let (cur, path, cost) = working.remove(0);
         if solver.is_finished(&cur) {
+            if is_verbose {
+                solver.print_path(&path.unwrap());
+            }
             return cost;
         }
         if let Some(existing_cost) = visited.get(&cur) {
@@ -195,21 +214,31 @@ where
         visited.insert(cur.clone(), cost);
 
         let possible_moves = solver.gen_possible_moves(&cur);
-        if solver.is_verbose() {
+        if is_verbose {
             println!("For {:?}, generated {} moves", cur, possible_moves.len());
         }
-        working.extend(possible_moves.into_iter().map(|(c, s)| (s, c + cost)));
+
+        working.extend(possible_moves.into_iter().map(|(c, s)| {
+            let p = accrue_path(&s, &path);
+            return (s, p, c + cost);
+        }));
     }
 
     return solver.cant_solve();
 }
 
-pub trait SolverBase<S> {
+pub trait SolverBase<S>
+where
+    S: SolverState,
+{
     fn is_finished(&self, state: &S) -> bool;
     fn print_state(&self, state: &S) -> ();
     // returns a list of (cost, new state) pairs
     fn gen_possible_moves(&self, state: &S) -> Vec<(i32, S)>;
     fn is_verbose(&self) -> bool;
+    fn print_path(&self, path: &Vec<S>) {
+        println!("Final path: {:?}", path);
+    }
     fn max_cost(&self) -> i32 {
         return i32::MAX - 1;
     }

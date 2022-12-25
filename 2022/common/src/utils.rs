@@ -13,3 +13,15 @@ where
         counter.insert(key, amount);
     }
 }
+
+pub fn mod_positive(value: i32, range: i32) -> i32 {
+    let mut v = value;
+    while v < 0 {
+        v += range;
+    }
+    return v % range;
+}
+
+pub fn mod_one_through_range(value: i32, range: i32) -> i32 {
+    return mod_positive(value - 1, range) + 1;
+}
