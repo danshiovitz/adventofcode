@@ -9,23 +9,15 @@ struct Day25 {
 fn to_snafu(val: i64) -> Vec<char> {
     let mut cur = val;
     let mut ret = Vec::new();
-    let mut carry = false;
     while cur != 0 {
-        let m = cur % 5;
-        let mut i = m;
-        if carry {
-            i += 1;
-            carry = false;
-            if i == 5 {
-                carry = true;
-                i = 0;
-            }
+        let mut m = cur % 5;
+        if m >= 3 {
+            m -= 5;
         }
-        if i >= 0 && i <= 2 {
-            ret.insert(0, ('0' as u8 + i as u8) as char);
+        if m >= 0 && m <= 2 {
+            ret.insert(0, ('0' as u8 + m as u8) as char);
         } else {
-            carry = true;
-            if i == 3 {
+            if m == -2 {
                 ret.insert(0, '=');
             } else {
                 ret.insert(0, '-');
@@ -33,9 +25,6 @@ fn to_snafu(val: i64) -> Vec<char> {
         }
         cur -= m;
         cur /= 5;
-    }
-    if carry {
-        ret.insert(0, '1');
     }
     return ret;
 }
